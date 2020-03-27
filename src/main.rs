@@ -1,6 +1,7 @@
 use std::io::{stdin, stdout, Write};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
+use termion::screen::AlternateScreen;
 use termion::*;
 
 use getopts::Options;
@@ -56,7 +57,7 @@ fn run_viewer_with_file(file_name: &str) {
     let buffer = load_file_to_buffer(file_name);
 
     let stdin = stdin();
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
