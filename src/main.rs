@@ -16,13 +16,17 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-fn run_viewer_with_file(file_name: &str) {
-
+fn load_file_to_buffer(file_name: &str) -> Vec<String> {
     let mut lines = Vec::<String>::new();
 
     for result in BufReader::new(File::open(file_name).unwrap()).lines() {
         lines.push(result.unwrap().clone());
     }
+    lines
+}
+
+fn run_viewer_with_file(file_name: &str) {
+    let buffer = load_file_to_buffer(file_name);
 
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
@@ -30,14 +34,10 @@ fn run_viewer_with_file(file_name: &str) {
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
 
-    let mut y = 0 as usize;
-
-    for l in lines {
-        write!(stdout, "{}{}",
-            cursor::Goto(1, y as u16 +1),
-            l,
-        ).unwrap();
-        y = y+1;
+    if let Ok((width, height)) = terminal_size() {
+        for y in 0..height-1 {
+            write!(stdout, "{}{}", cursor::Goto(1, y as u16 + 1), buffer[y as usize]).unwrap();
+        }
         stdout.flush().unwrap();
     }
 
