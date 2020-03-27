@@ -42,11 +42,21 @@ fn draw_buffer_to_window(
     write!(output, "{}{}", clear::All, cursor::Hide).unwrap();
     write!(output, "{}", cursor::Goto(win.x, win.y)).unwrap();
     for y in 0..win.height - 1 {
+        let line = if buffer.len() > from + y as usize {
+            &buffer[from + y as usize]
+        } else {
+            ""
+        };
+        let end = if line.len() > win.width as usize {
+            line.char_indices().nth(win.width as usize).unwrap().0
+        } else {
+            line.len()
+        };
         write!(
             output,
             "{}{}",
             cursor::Goto(1, y as u16 + 1),
-            buffer[from + y as usize]
+            &line[0..end]
         )
         .unwrap();
     }
