@@ -25,6 +25,21 @@ fn load_file_to_buffer(file_name: &str) -> Vec<String> {
     lines
 }
 
+struct Window {
+    left_top: u16,
+    right_top: u16,
+    width: u16,
+    height: u16,
+}
+
+fn draw_buffer_to_window(buffer: Vec<String>, input: &std::io::Stdin, output: &mut termion::raw::RawTerminal<std::io::Stdout>, win: Window) {
+    let height = win.height;
+    for y in 0..win.height-1 {
+        write!(output, "{}{}", cursor::Goto(1, y as u16 + 1), buffer[y as usize]).unwrap();
+    }
+    output.flush().unwrap();
+}
+
 fn run_viewer_with_file(file_name: &str) {
     let buffer = load_file_to_buffer(file_name);
 
@@ -35,19 +50,18 @@ fn run_viewer_with_file(file_name: &str) {
     stdout.flush().unwrap();
 
     if let Ok((width, height)) = terminal_size() {
-        for y in 0..height-1 {
-            write!(stdout, "{}{}", cursor::Goto(1, y as u16 + 1), buffer[y as usize]).unwrap();
-        }
-        stdout.flush().unwrap();
-    }
+        let mut win = Window{left_top: 1, right_top: 1, width: width, height: height};
 
-    for c in stdin.keys() {
-        match c {
-            Ok(event::Key::Ctrl('c')) => break,
-            _ => {}
+        draw_buffer_to_window(buffer, &stdin, &mut stdout, win);
+
+        for c in stdin.keys() {
+            match c {
+                Ok(event::Key::Ctrl('c')) => break,
+                _ => {}
+            }
         }
+        write!(stdout, "{}", termion::cursor::Show).unwrap();
     }
-    write!(stdout, "{}", termion::cursor::Show).unwrap();
 }
 
 fn main() {
