@@ -26,16 +26,28 @@ fn load_file_to_buffer(file_name: &str) -> Vec<String> {
 }
 
 struct Window {
-    left_top: u16,
-    right_top: u16,
+    x: u16,
+    y: u16,
     width: u16,
     height: u16,
 }
 
-fn draw_buffer_to_window(buffer: Vec<String>, input: &std::io::Stdin, output: &mut termion::raw::RawTerminal<std::io::Stdout>, win: Window) {
-    let height = win.height;
-    for y in 0..win.height-1 {
-        write!(output, "{}{}", cursor::Goto(1, y as u16 + 1), buffer[y as usize]).unwrap();
+fn draw_buffer_to_window(
+    buffer: &Vec<String>,
+    from: usize,
+    output: &mut termion::raw::RawTerminal<std::io::Stdout>,
+    win: &Window,
+) {
+    write!(output, "{}{}", clear::All, cursor::Hide).unwrap();
+    write!(output, "{}", cursor::Goto(win.x, win.y)).unwrap();
+    for y in 0..win.height - 1 {
+        write!(
+            output,
+            "{}{}",
+            cursor::Goto(1, y as u16 + 1),
+            buffer[from + y as usize]
+        )
+        .unwrap();
     }
     output.flush().unwrap();
 }
@@ -50,13 +62,31 @@ fn run_viewer_with_file(file_name: &str) {
     stdout.flush().unwrap();
 
     if let Ok((width, height)) = terminal_size() {
-        let mut win = Window{left_top: 1, right_top: 1, width: width, height: height};
+        let win = Window {
+            x: 1,
+            y: 1,
+            width: width,
+            height: height,
+        };
+        let mut begin = 0;
 
-        draw_buffer_to_window(buffer, &stdin, &mut stdout, win);
+        draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
 
         for c in stdin.keys() {
             match c {
                 Ok(event::Key::Ctrl('c')) => break,
+                Ok(event::Key::Down) => {
+                    if begin < buffer.len() - win.height as usize + 1 {
+                        begin = begin + 1;
+                        draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
+                    }
+                }
+                Ok(event::Key::Up) => {
+                    if begin > 0 {
+                        begin = begin - 1;
+                        draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
+                    }
+                }
                 _ => {}
             }
         }
