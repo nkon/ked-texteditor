@@ -76,13 +76,13 @@ fn run_viewer_with_file(file_name: &str) {
         for c in stdin.keys() {
             match c {
                 Ok(event::Key::Ctrl('c')) => break,
-                Ok(event::Key::Down) => {
+                Ok(event::Key::PageDown) => {
                     if begin < buffer.len() - win.height as usize + 1 {
                         begin = begin + 1;
                         draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
                     }
                 }
-                Ok(event::Key::Up) => {
+                Ok(event::Key::PageUp) => {
                     if begin > 0 {
                         begin = begin - 1;
                         draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
