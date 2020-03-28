@@ -47,13 +47,13 @@ impl Window {
     }
     /// set cursor x position on the window coodinate.
     fn set_cur_x(&mut self, x: u16) {
-        if x < self.screen.width {
+        if x < self.width {
             self.cur_x = x
         }
     }
     /// set cursor y position on the window coodinate.
     fn set_cur_y(&mut self, y: u16) {
-        if y < self.screen.height {
+        if y < self.height {
             self.cur_y = y
         }
     }
