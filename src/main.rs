@@ -62,7 +62,8 @@ impl Window {
 /// Edit buffer. current impriment is Vec<String>
 struct EditBuffer {
     buffer: Vec<String>,
-    cur_x: usize, // 0-index-ed.
+    begin: usize, // line to start display
+    cur_x: usize, // 0-index-ed buffer coodinates.
     cur_y: usize,
     window: Window, // Window information is cloned at the initalizing.
 }
@@ -70,16 +71,19 @@ struct EditBuffer {
 impl EditBuffer {
     fn new(win: Window) -> Self {
         Self {
-            buffer: vec![<String>::new()],
+            buffer: vec![] as Vec<String>,
+            begin: 0,
             cur_x: 0,
             cur_y: 0,
             window: win,
         }
     }
     fn load_file(&mut self, file_name: &str) {
-        self.buffer.remove(0); // remove the first line which is allocated at the initalizing.
         for result in BufReader::new(File::open(file_name).unwrap()).lines() {
-            self.buffer.push(result.unwrap().clone());
+            match result {
+                Ok(s) => self.buffer.push(s.clone()),
+                Err(_) => self.buffer.push(String::new()),
+            }
         }
     }
     /// return cursor x position on the buffer coodinate.
@@ -91,7 +95,17 @@ impl EditBuffer {
         if x < self.buffer[self.cur_y].len() {
             self.cur_x = x;
         } else {
-            self.cur_x = self.buffer[self.cur_y].len() - 1;
+            if self.buffer[self.cur_y].len() > 0 {
+                self.cur_x = self.buffer[self.cur_y].len() - 1;
+            } else {
+                self.cur_x = 0;
+            }
+        }
+    }
+    fn update_win_cur(&mut self) {
+        self.window.set_cur_x(self.cur_x as u16);
+        if self.cur_y >= self.begin {
+            self.window.set_cur_y((self.cur_y-self.begin) as u16);
         }
     }
     /// return cursor y position on the buffer coodinate.
@@ -104,14 +118,33 @@ impl EditBuffer {
             self.cur_y = y
         }
     }
-    fn replace_char(&mut self, ch: char) {
-        let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
-        line[self.cur_x] = ch;
-        let mut s = String::new();
-        for c in line {
-            s.push(c)
+    fn scrollup(&mut self) {
+        if self.begin < self.buffer.len() - self.window.height as usize + 1 {
+            self.begin += 1;
+            self.set_cur_y(self.cur_y + 1);
         }
-        self.buffer[self.cur_y] = s;
+    }
+    fn scrolldown(&mut self) {
+        if self.begin > 0 {
+            self.begin -= 1;
+            if self.cur_y > 0 {
+                self.set_cur_y(self.cur_y - 1);
+            }
+        }
+    }
+    fn replace_char(&mut self, ch: char) {
+        self.set_cur_x(self.cur_x);
+        if self.buffer[self.cur_y].len() > 0 {
+            let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
+            line[self.cur_x] = ch;
+            let mut s = String::new();
+            for c in line {
+                s.push(c)
+            }
+            self.buffer[self.cur_y] = s;
+            self.window.set_cur_x(self.cur_x as u16);
+            self.window.set_cur_y(self.cur_y as u16);
+        }
     }
     fn set_window(&mut self, win: Window) {
         self.window = win;
@@ -119,12 +152,12 @@ impl EditBuffer {
     fn window(&mut self) -> &mut Window {
         &mut self.window
     }
-    fn redraw(&self, from: usize, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+    fn redraw(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         write!(output, "{}", clear::All).unwrap();
         write!(output, "{}", cursor::Goto(1, 1)).unwrap();
-        for y in 0..self.window.height - 1 {
-            let line = if self.buffer.len() > from + y as usize {
-                &self.buffer[from + y as usize]
+        for y in 0..self.window.height as usize - 1 {
+            let line = if self.buffer.len() > self.begin + y {
+                &self.buffer[self.begin + y]
             } else {
                 ""
             };
@@ -146,6 +179,17 @@ impl EditBuffer {
         .unwrap();
         output.flush().unwrap();
     }
+    fn disp_params(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        write!(output, "{}", cursor::Goto(60, 1)).unwrap();
+        write!(output, "screen({},{})", self.window.screen.width, self.window.screen.height).unwrap();
+        write!(output, "{}", cursor::Goto(60, 2)).unwrap();
+        write!(output, "win cur({},{})", self.window.cur_x, self.window.cur_y).unwrap();
+        write!(output, "{}", cursor::Goto(60, 3)).unwrap();
+        write!(output, "buf cur({},{})", self.cur_x, self.cur_y).unwrap();
+
+        write!(output, "{}", cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())).unwrap();
+        output.flush().unwrap();
+    }
 }
 
 fn run_viewer_with_file(file_name: &str, win: Window) {
@@ -154,36 +198,29 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
     buf.set_window(win);
 
     let stdin = stdin();
-    let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
-    // let mut stdout = stdout().into_raw_mode().unwrap();
+    // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
+    let mut stdout = stdout().into_raw_mode().unwrap();
     write!(stdout, "{}", clear::All).unwrap();
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
 
-    let mut begin = 0;
-
     //    draw_buffer_to_window(&buf, begin, &mut stdout, &mut win);
-    buf.redraw(begin, &mut stdout);
+    buf.redraw(&mut stdout);
 
     for c in stdin.keys() {
         match c {
             Ok(event::Key::Ctrl('c')) => break,
             Ok(event::Key::PageDown) => {
-                if begin < buf.buffer.len() - buf.window().height as usize + 1 {
-                    begin = begin + 1;
-                    buf.redraw(begin, &mut stdout);
-                }
+                buf.scrollup();
+                buf.redraw(&mut stdout);
             }
             Ok(event::Key::PageUp) => {
-                if begin > 0 {
-                    begin = begin - 1;
-                    buf.redraw(begin, &mut stdout);
-                }
+                buf.scrolldown();
+                buf.redraw(&mut stdout);
             }
             Ok(event::Key::Down) => {
                 buf.set_cur_y(buf.cur_y() + 1);
-                let u_y = buf.cur_y() as u16;
-                buf.window().set_cur_y(u_y);
+                buf.update_win_cur();
                 write!(
                     stdout,
                     "{}",
@@ -195,8 +232,7 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
             Ok(event::Key::Up) => {
                 if buf.cur_y() > 0 {
                     buf.set_cur_y(buf.cur_y() - 1);
-                    let u_y = buf.cur_y() as u16;
-                    buf.window().set_cur_y(u_y);
+                    buf.update_win_cur();
                     write!(
                         stdout,
                         "{}",
@@ -234,10 +270,11 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
             }
             Ok(event::Key::Char(c)) => {
                 buf.replace_char(c);
-                buf.redraw(begin, &mut stdout);
+                buf.redraw(&mut stdout);
             }
             _ => {}
         }
+        buf.disp_params(&mut stdout);
     }
     write!(stdout, "{}", termion::cursor::Show).unwrap();
 }
