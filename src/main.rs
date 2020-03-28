@@ -92,11 +92,11 @@ impl EditBuffer {
     }
     /// set cursor x position on the buffer coodinate.
     fn set_cur_x(&mut self, x: usize) {
-        if x < self.buffer[self.cur_y].len() {
+        if x <= self.buffer[self.cur_y].len() {
             self.cur_x = x;
         } else {
             if self.buffer[self.cur_y].len() > 0 {
-                self.cur_x = self.buffer[self.cur_y].len() - 1;
+                self.cur_x = self.buffer[self.cur_y].len();
             } else {
                 self.cur_x = 0;
             }
@@ -176,7 +176,12 @@ impl EditBuffer {
             self.cur_x = 0;
             self.cur_y += 1;
             self.update_win_cur();
-        } else if self.buffer[self.cur_y].len() == 0 {
+        } else if self.buffer[self.cur_y].len() == 0 {  // insert NEWLINE on the blank line.
+            self.buffer.insert(self.cur_y+1, String::from(""));
+            self.cur_x = 0;
+            self.cur_y += 1;
+            self.update_win_cur();
+        } else if self.buffer[self.cur_y].len() == self.cur_x {  // append NEW line.
             self.buffer.insert(self.cur_y+1, String::from(""));
             self.cur_x = 0;
             self.cur_y += 1;
