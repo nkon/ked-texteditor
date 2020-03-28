@@ -167,6 +167,17 @@ impl EditBuffer {
             self.window.set_cur_y(self.cur_y as u16);
         }
     }
+    fn insert_newline(&mut self) {
+        if self.buffer[self.cur_y].len() > self.cur_x { // insert NEWLINE between existing line.
+            let line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
+            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x..]);
+            self.buffer[self.cur_y] = line1;
+            self.buffer.insert(self.cur_y+1, line2);
+            self.cur_x = 0;
+            self.cur_y += 1;
+            self.update_win_cur();
+        }
+    }
     fn set_window(&mut self, win: Window) {
         self.window = win;
     }
@@ -297,9 +308,14 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                 buf.redraw_cursor(&mut stdout);
             }
             Ok(event::Key::Char(c)) => {
-                // buf.replace_char(c);
-                buf.insert_char(c);
-                buf.redraw(&mut stdout);
+                if c == '\n' {
+                    buf.insert_newline();
+                    buf.redraw(&mut stdout);
+                } else {
+                    // buf.replace_char(c);
+                    buf.insert_char(c);
+                    buf.redraw(&mut stdout);
+                }
             }
             _ => {}
         }
