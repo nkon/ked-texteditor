@@ -168,37 +168,43 @@ impl EditBuffer {
         }
     }
     fn insert_newline(&mut self) {
-        if self.buffer[self.cur_y].len() > self.cur_x { // insert NEWLINE between existing line.
+        if self.buffer[self.cur_y].len() > self.cur_x {
+            // insert NEWLINE between existing line.
             let line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
             let line2 = String::from(&self.buffer[self.cur_y][self.cur_x..]);
             self.buffer[self.cur_y] = line1;
-            self.buffer.insert(self.cur_y+1, line2);
+            self.buffer.insert(self.cur_y + 1, line2);
             self.cur_x = 0;
             self.cur_y += 1;
-        } else if self.buffer[self.cur_y].len() == 0 {  // insert NEWLINE on the blank line.
-            self.buffer.insert(self.cur_y+1, String::from(""));
+        } else if self.buffer[self.cur_y].len() == 0 {
+            // insert NEWLINE on the blank line.
+            self.buffer.insert(self.cur_y + 1, String::from(""));
             self.cur_x = 0;
             self.cur_y += 1;
-        } else if self.buffer[self.cur_y].len() == self.cur_x {  // append NEW line.
-            self.buffer.insert(self.cur_y+1, String::from(""));
+        } else if self.buffer[self.cur_y].len() == self.cur_x {
+            // append NEW line.
+            self.buffer.insert(self.cur_y + 1, String::from(""));
             self.cur_x = 0;
             self.cur_y += 1;
         }
         self.update_win_cur();
     }
     fn delete_char(&mut self) {
-        if self.buffer[self.cur_y].len() > self.cur_x { // delete char between existing line.
+        if self.buffer[self.cur_y].len() > self.cur_x {
+            // delete char between existing line.
             let mut line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
-            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x+1..]);
+            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x + 1..]);
             line1.push_str(&line2);
             self.buffer[self.cur_y] = line1;
-        } else if self.buffer[self.cur_y].len() == 0 {  // delete blank line.
+        } else if self.buffer[self.cur_y].len() == 0 {
+            // delete blank line.
             self.buffer.remove(self.cur_y);
             self.cur_x = 0;
-        } else if self.buffer[self.cur_y].len() == self.cur_x {  // delete NEWLINE at the end of line -> join to the next line.
+        } else if self.buffer[self.cur_y].len() == self.cur_x {
+            // delete NEWLINE at the end of line -> join to the next line.
             let mut line1 = String::from(&self.buffer[self.cur_y]);
-            line1.push_str(&self.buffer[self.cur_y+1]);
-            self.buffer.remove(self.cur_y+1);
+            line1.push_str(&self.buffer[self.cur_y + 1]);
+            self.buffer.remove(self.cur_y + 1);
             self.buffer[self.cur_y] = line1;
         }
         self.update_win_cur();
@@ -261,7 +267,12 @@ impl EditBuffer {
         )
         .unwrap();
         write!(output, "{}", cursor::Goto(60, 3)).unwrap();
-        write!(output, "buf cur({},{}) begin={}        ", self.cur_x, self.cur_y, self.begin).unwrap();
+        write!(
+            output,
+            "buf cur({},{}) begin={}        ",
+            self.cur_x, self.cur_y, self.begin
+        )
+        .unwrap();
 
         write!(
             output,
@@ -299,7 +310,7 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                 buf.redraw(&mut stdout);
             }
             Ok(event::Key::Down) => {
-                if buf.cur_y() >= buf.begin + buf.window.height as usize -1 {
+                if buf.cur_y() >= buf.begin + buf.window.height as usize - 1 {
                     buf.scrollup(1);
                     buf.redraw(&mut stdout);
                 } else {
@@ -323,6 +334,11 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                     buf.set_cur_x(buf.cur_x() - 1);
                     let u_x = buf.cur_x() as u16;
                     buf.window().set_cur_x(u_x);
+                    buf.redraw_cursor(&mut stdout);
+                } else if buf.cur_x() == 0 {
+                    buf.set_cur_y(buf.cur_y() - 1);
+                    buf.set_cur_x(buf.buffer[buf.cur_y].len() + 1);
+                    buf.update_win_cur();
                     buf.redraw_cursor(&mut stdout);
                 }
             }
@@ -381,7 +397,7 @@ fn main() {
             x: 1,
             y: 1,
             width: screen.width,
-            height: screen.height-2,
+            height: screen.height - 2,
             cur_x: 0,
             cur_y: 0,
             screen: screen,
