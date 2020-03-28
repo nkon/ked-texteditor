@@ -105,7 +105,7 @@ impl EditBuffer {
     fn update_win_cur(&mut self) {
         self.window.set_cur_x(self.cur_x as u16);
         if self.cur_y >= self.begin {
-            self.window.set_cur_y((self.cur_y-self.begin) as u16);
+            self.window.set_cur_y((self.cur_y - self.begin) as u16);
         }
     }
     /// return cursor y position on the buffer coodinate.
@@ -200,15 +200,39 @@ impl EditBuffer {
         .unwrap();
         output.flush().unwrap();
     }
+    fn redraw_cursor(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        write!(
+            output,
+            "{}",
+            cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())
+        )
+        .unwrap();
+        output.flush().unwrap();
+    }
     fn disp_params(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         write!(output, "{}", cursor::Goto(60, 1)).unwrap();
-        write!(output, "screen({},{})", self.window.screen.width, self.window.screen.height).unwrap();
+        write!(
+            output,
+            "screen({},{})",
+            self.window.screen.width, self.window.screen.height
+        )
+        .unwrap();
         write!(output, "{}", cursor::Goto(60, 2)).unwrap();
-        write!(output, "win cur({},{})", self.window.cur_x, self.window.cur_y).unwrap();
+        write!(
+            output,
+            "win cur({},{})",
+            self.window.cur_x, self.window.cur_y
+        )
+        .unwrap();
         write!(output, "{}", cursor::Goto(60, 3)).unwrap();
         write!(output, "buf cur({},{})", self.cur_x, self.cur_y).unwrap();
 
-        write!(output, "{}", cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())).unwrap();
+        write!(
+            output,
+            "{}",
+            cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())
+        )
+        .unwrap();
         output.flush().unwrap();
     }
 }
@@ -241,25 +265,13 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
             Ok(event::Key::Down) => {
                 buf.set_cur_y(buf.cur_y() + 1);
                 buf.update_win_cur();
-                write!(
-                    stdout,
-                    "{}",
-                    cursor::Goto(buf.window().scr_cur_x(), buf.window().scr_cur_y())
-                )
-                .unwrap();
-                stdout.flush().unwrap();
+                buf.redraw_cursor(&mut stdout);
             }
             Ok(event::Key::Up) => {
                 if buf.cur_y() > 0 {
                     buf.set_cur_y(buf.cur_y() - 1);
                     buf.update_win_cur();
-                    write!(
-                        stdout,
-                        "{}",
-                        cursor::Goto(buf.window().scr_cur_x(), buf.window().scr_cur_y())
-                    )
-                    .unwrap();
-                    stdout.flush().unwrap();
+                    buf.redraw_cursor(&mut stdout);
                 }
             }
             Ok(event::Key::Left) => {
@@ -267,26 +279,14 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                     buf.set_cur_x(buf.cur_x() - 1);
                     let u_x = buf.cur_x() as u16;
                     buf.window().set_cur_x(u_x);
-                    write!(
-                        stdout,
-                        "{}",
-                        cursor::Goto(buf.window().scr_cur_x(), buf.window().scr_cur_y())
-                    )
-                    .unwrap();
-                    stdout.flush().unwrap();
+                    buf.redraw_cursor(&mut stdout);
                 }
             }
             Ok(event::Key::Right) => {
                 buf.set_cur_x(buf.cur_x() + 1);
                 let u_x = buf.cur_x() as u16;
                 buf.window().set_cur_x(u_x);
-                write!(
-                    stdout,
-                    "{}",
-                    cursor::Goto(buf.window().scr_cur_x(), buf.window().scr_cur_y())
-                )
-                .unwrap();
-                stdout.flush().unwrap();
+                buf.redraw_cursor(&mut stdout);
             }
             Ok(event::Key::Char(c)) => {
                 // buf.replace_char(c);
@@ -328,7 +328,7 @@ fn main() {
             x: 1,
             y: 1,
             width: screen.width,
-            height: screen.height,
+            height: screen.height-2,
             cur_x: 0,
             cur_y: 0,
             screen: screen,
