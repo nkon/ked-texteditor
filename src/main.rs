@@ -176,7 +176,7 @@ impl EditBuffer {
     fn redraw(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         write!(output, "{}", clear::All).unwrap();
         write!(output, "{}", cursor::Goto(1, 1)).unwrap();
-        for y in 0..self.window.height as usize - 1 {
+        for y in 0..self.window.height as usize {
             let line = if self.buffer.len() > self.begin + y {
                 &self.buffer[self.begin + y]
             } else {
@@ -220,12 +220,12 @@ impl EditBuffer {
         write!(output, "{}", cursor::Goto(60, 2)).unwrap();
         write!(
             output,
-            "win cur({},{})",
+            "win cur({},{})        ",
             self.window.cur_x, self.window.cur_y
         )
         .unwrap();
         write!(output, "{}", cursor::Goto(60, 3)).unwrap();
-        write!(output, "buf cur({},{})", self.cur_x, self.cur_y).unwrap();
+        write!(output, "buf cur({},{}) begin={}        ", self.cur_x, self.cur_y, self.begin).unwrap();
 
         write!(
             output,
@@ -263,15 +263,23 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                 buf.redraw(&mut stdout);
             }
             Ok(event::Key::Down) => {
-                buf.set_cur_y(buf.cur_y() + 1);
+                if buf.cur_y() >= buf.begin + buf.window.height as usize -1 {
+                    buf.scrollup(1);
+                    buf.redraw(&mut stdout);
+                } else {
+                    buf.set_cur_y(buf.cur_y() + 1);
+                }
                 buf.update_win_cur();
                 buf.redraw_cursor(&mut stdout);
             }
             Ok(event::Key::Up) => {
-                if buf.cur_y() > 0 {
+                if buf.cur_y() > buf.begin {
                     buf.set_cur_y(buf.cur_y() - 1);
                     buf.update_win_cur();
                     buf.redraw_cursor(&mut stdout);
+                } else {
+                    buf.scrolldown(1);
+                    buf.redraw(&mut stdout);
                 }
             }
             Ok(event::Key::Left) => {
