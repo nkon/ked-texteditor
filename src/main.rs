@@ -39,7 +39,7 @@ fn draw_buffer_to_window(
     output: &mut termion::raw::RawTerminal<std::io::Stdout>,
     win: &Window,
 ) {
-    write!(output, "{}{}", clear::All, cursor::Hide).unwrap();
+    write!(output, "{}", clear::All).unwrap();
     write!(output, "{}", cursor::Goto(win.x, win.y)).unwrap();
     for y in 0..win.height - 1 {
         let line = if buffer.len() > from + y as usize {
@@ -60,6 +60,7 @@ fn draw_buffer_to_window(
         )
         .unwrap();
     }
+    write!(output, "{}", cursor::Goto(1, 1)).unwrap();
     output.flush().unwrap();
 }
 
@@ -68,9 +69,13 @@ fn run_viewer_with_file(file_name: &str) {
 
     let stdin = stdin();
     let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
-    write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
+    write!(stdout, "{}", clear::All).unwrap();
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
+
+    let mut curx = 1;
+    let mut cury = 1;
+
 
     if let Ok((width, height)) = terminal_size() {
         let win = Window {
@@ -97,6 +102,26 @@ fn run_viewer_with_file(file_name: &str) {
                         begin = begin - 1;
                         draw_buffer_to_window(&buffer, begin, &mut stdout, &win);
                     }
+                }
+                Ok(event::Key::Down) => {
+                    cury += 1;
+                    write!(stdout,"{}",cursor::Goto(curx,cury)).unwrap();
+                    stdout.flush().unwrap();
+                }
+                Ok(event::Key::Up) => {
+                    cury -= 1;
+                    write!(stdout,"{}",cursor::Goto(curx,cury)).unwrap();
+                    stdout.flush().unwrap();
+                }
+                Ok(event::Key::Left) => {
+                    curx -= 1;
+                    write!(stdout,"{}",cursor::Goto(curx,cury)).unwrap();
+                    stdout.flush().unwrap();
+                }
+                Ok(event::Key::Right) => {
+                    curx += 1;
+                    write!(stdout,"{}",cursor::Goto(curx,cury)).unwrap();
+                    stdout.flush().unwrap();
                 }
                 _ => {}
             }
