@@ -24,22 +24,47 @@ struct Screen {
     height: u16,
 }
 
-/// Display window. local coordinate is 0-index-ed.
+/// Display window
 #[derive(Clone)]
 struct Window {
-    x: u16,
+    x: u16, // left top position of the window, 1-index-ed screen coodinates
     y: u16,
     width: u16,
     height: u16,
-    screen: Screen, // refering the root screen
+    cur_x: u16, // cursor position: relative coodinates on the window, 0-index-ed.
+    cur_y: u16,
+    screen: Screen, // Screen information is cloned at the initalizing.
+}
+
+impl Window {
+    /// return cursor x position on the screen coodinate.
+    fn scr_cur_x(&self) -> u16 {
+        self.cur_x + self.x
+    }
+    /// return cursor y position on the screen coodinate.
+    fn scr_cur_y(&self) -> u16 {
+        self.cur_y + self.y
+    }
+    /// set cursor x position on the window coodinate.
+    fn set_cur_x(&mut self, x: u16) {
+        if x < self.screen.width {
+            self.cur_x = x
+        }
+    }
+    /// set cursor y position on the window coodinate.
+    fn set_cur_y(&mut self, y: u16) {
+        if y < self.screen.height {
+            self.cur_y = y
+        }
+    }
 }
 
 /// Edit buffer. current impriment is Vec<String>
 struct EditBuffer {
     buffer: Vec<String>,
-    cur_x: usize,
+    cur_x: usize, // 0-index-ed.
     cur_y: usize,
-    window: Window,
+    window: Window, // Window information is cloned at the initalizing.
 }
 
 impl EditBuffer {
@@ -51,11 +76,37 @@ impl EditBuffer {
             window: win,
         }
     }
-}
-
-fn load_file_to_buffer(file_name: &str, buf: &mut EditBuffer) {
-    for result in BufReader::new(File::open(file_name).unwrap()).lines() {
-        buf.buffer.push(result.unwrap().clone());
+    fn load_file(&mut self, file_name: &str) {
+        self.buffer.remove(0); // remove the first line which is allocated at the initalizing.
+        for result in BufReader::new(File::open(file_name).unwrap()).lines() {
+            self.buffer.push(result.unwrap().clone());
+        }
+    }
+    /// return cursor x position on the buffer coodinate.
+    fn cur_x(&self) -> usize {
+        self.cur_x
+    }
+    /// set cursor x position on the buffer coodinate.
+    fn set_cur_x(&mut self, x: usize) {
+        if x < self.buffer[self.cur_y].len() {
+            self.cur_x = x
+        }
+    }
+    /// return cursor y position on the buffer coodinate.
+    fn cur_y(&self) -> usize {
+        self.cur_y
+    }
+    /// set cursor y position on the buffer coodinate.
+    fn set_cur_y(&mut self, y: usize) {
+        if y < self.buffer.len() {
+            self.cur_y = y
+        }
+    }
+    fn set_window(&mut self, mut win: Window) {
+        self.window = win;
+    }
+    fn window(&mut self) -> &mut Window{
+        &mut self.window
     }
 }
 
@@ -66,7 +117,7 @@ fn draw_buffer_to_window(
     win: &mut Window,
 ) {
     write!(output, "{}", clear::All).unwrap();
-    write!(output, "{}", cursor::Goto(win.x+1, win.y+1)).unwrap();
+    write!(output, "{}", cursor::Goto(1, 1)).unwrap();
     for y in 0..win.height - 1 {
         let line = if buffer.buffer.len() > from + y as usize {
             &buffer.buffer[from + y as usize]
@@ -80,23 +131,20 @@ fn draw_buffer_to_window(
         };
         write!(output, "{}{}", cursor::Goto(1, y as u16 + 1), &line[0..end]).unwrap();
     }
-    write!(output, "{}", cursor::Goto(1, 1)).unwrap();
+    write!(output, "{}", cursor::Goto(win.scr_cur_x(), win.scr_cur_y())).unwrap();
     output.flush().unwrap();
 }
 
 fn run_viewer_with_file(file_name: &str, mut win: Window) {
     let mut buf = EditBuffer::new(win.clone());
-    load_file_to_buffer(file_name, &mut buf);
+    buf.load_file(file_name);
 
     let stdin = stdin();
     let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
+    //    let mut stdout = stdout().into_raw_mode().unwrap();
     write!(stdout, "{}", clear::All).unwrap();
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
-
-
-    let mut curx = 1;
-    let mut cury = 1;
 
     let mut begin = 0;
 
@@ -118,23 +166,31 @@ fn run_viewer_with_file(file_name: &str, mut win: Window) {
                 }
             }
             Ok(event::Key::Down) => {
-                cury += 1;
-                write!(stdout, "{}", cursor::Goto(curx, cury)).unwrap();
+                buf.set_cur_y(buf.cur_y() + 1);
+                win.set_cur_y(buf.cur_y() as u16);
+                write!(stdout, "{}", cursor::Goto(win.scr_cur_x(), win.scr_cur_y())).unwrap();
                 stdout.flush().unwrap();
             }
             Ok(event::Key::Up) => {
-                cury -= 1;
-                write!(stdout, "{}", cursor::Goto(curx, cury)).unwrap();
-                stdout.flush().unwrap();
+                if buf.cur_y() > 0 {
+                    buf.set_cur_y(buf.cur_y() - 1);
+                    win.set_cur_y(buf.cur_y() as u16);
+                    write!(stdout, "{}", cursor::Goto(win.scr_cur_x(), win.scr_cur_y())).unwrap();
+                    stdout.flush().unwrap();
+                }
             }
             Ok(event::Key::Left) => {
-                curx -= 1;
-                write!(stdout, "{}", cursor::Goto(curx, cury)).unwrap();
-                stdout.flush().unwrap();
+                if buf.cur_x() > 0 {
+                    buf.set_cur_x(buf.cur_x() - 1);
+                    win.set_cur_x(buf.cur_x() as u16);
+                    write!(stdout, "{}", cursor::Goto(win.scr_cur_x(), win.scr_cur_y())).unwrap();
+                    stdout.flush().unwrap();
+                }
             }
             Ok(event::Key::Right) => {
-                curx += 1;
-                write!(stdout, "{}", cursor::Goto(curx, cury)).unwrap();
+                buf.set_cur_x(buf.cur_x() + 1);
+                win.set_cur_x(buf.cur_x() as u16);
+                write!(stdout, "{}", cursor::Goto(win.scr_cur_x(), win.scr_cur_y())).unwrap();
                 stdout.flush().unwrap();
             }
             _ => {}
@@ -155,25 +211,27 @@ fn main() {
     };
     if matches.opt_present("h") {
         print_usage(&program, opts);
-        return;
+        std::process::exit(0);
     }
     if matches.free.is_empty() {
         print_usage(&program, opts);
-    } else {
-        let input_file_name = matches.free[0].clone();
-        if let Ok((width, height)) = terminal_size() {
-            let screen = Screen {
-                width: width,
-                height: height,
-            };
-            let mut editor_win = Window {
-                x: 0,
-                y: 0,
-                width: screen.width,
-                height: screen.height,
-                screen: screen,
-            };
-            run_viewer_with_file(&input_file_name, editor_win);
-        }
+        std::process::exit(0);
+    }
+    let input_file_name = matches.free[0].clone();
+    if let Ok((width, height)) = terminal_size() {
+        let screen = Screen {
+            width: width,
+            height: height,
+        };
+        let mut editor_win = Window {
+            x: 1,
+            y: 1,
+            width: screen.width,
+            height: screen.height,
+            cur_x: 0,
+            cur_y: 0,
+            screen: screen,
+        };
+        run_viewer_with_file(&input_file_name, editor_win);
     }
 }
