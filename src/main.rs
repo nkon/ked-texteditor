@@ -118,17 +118,17 @@ impl EditBuffer {
             self.cur_y = y
         }
     }
-    fn scrollup(&mut self) {
-        if self.begin < self.buffer.len() - self.window.height as usize + 1 {
-            self.begin += 1;
-            self.set_cur_y(self.cur_y + 1);
+    fn scrollup(&mut self, n: usize) {
+        if self.begin < self.buffer.len() - self.window.height as usize + n {
+            self.begin += n;
+            self.set_cur_y(self.cur_y + n);
         }
     }
-    fn scrolldown(&mut self) {
-        if self.begin > 0 {
-            self.begin -= 1;
-            if self.cur_y > 0 {
-                self.set_cur_y(self.cur_y - 1);
+    fn scrolldown(&mut self, n: usize) {
+        if self.begin >= n {
+            self.begin -= n;
+            if self.cur_y >= n {
+                self.set_cur_y(self.cur_y - n);
             }
         }
     }
@@ -255,11 +255,11 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
         match c {
             Ok(event::Key::Ctrl('c')) => break,
             Ok(event::Key::PageDown) => {
-                buf.scrollup();
+                buf.scrollup(1);
                 buf.redraw(&mut stdout);
             }
             Ok(event::Key::PageUp) => {
-                buf.scrolldown();
+                buf.scrolldown(1);
                 buf.redraw(&mut stdout);
             }
             Ok(event::Key::Down) => {
