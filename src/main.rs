@@ -146,6 +146,27 @@ impl EditBuffer {
             self.window.set_cur_y(self.cur_y as u16);
         }
     }
+    fn insert_char(&mut self, ch: char) {
+        self.set_cur_x(self.cur_x);
+        if self.buffer[self.cur_y].len() > 0 {
+            let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
+            line.insert(self.cur_x, ch);
+            let mut s = String::new();
+            for c in line {
+                s.push(c)
+            }
+            self.cur_x += 1;
+            self.buffer[self.cur_y] = s;
+            self.window.set_cur_x(self.cur_x as u16);
+            self.window.set_cur_y(self.cur_y as u16);
+        } else {
+            self.buffer[self.cur_y] = String::new();
+            self.buffer[self.cur_y].push(ch);
+            self.cur_x = 1;
+            self.window.set_cur_x(self.cur_x as u16);
+            self.window.set_cur_y(self.cur_y as u16);
+        }
+    }
     fn set_window(&mut self, win: Window) {
         self.window = win;
     }
@@ -204,7 +225,6 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
 
-    //    draw_buffer_to_window(&buf, begin, &mut stdout, &mut win);
     buf.redraw(&mut stdout);
 
     for c in stdin.keys() {
@@ -269,7 +289,8 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                 stdout.flush().unwrap();
             }
             Ok(event::Key::Char(c)) => {
-                buf.replace_char(c);
+                // buf.replace_char(c);
+                buf.insert_char(c);
                 buf.redraw(&mut stdout);
             }
             _ => {}
