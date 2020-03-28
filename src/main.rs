@@ -176,6 +176,11 @@ impl EditBuffer {
             self.cur_x = 0;
             self.cur_y += 1;
             self.update_win_cur();
+        } else if self.buffer[self.cur_y].len() == 0 {
+            self.buffer.insert(self.cur_y+1, String::from(""));
+            self.cur_x = 0;
+            self.cur_y += 1;
+            self.update_win_cur();
         }
     }
     fn set_window(&mut self, win: Window) {
