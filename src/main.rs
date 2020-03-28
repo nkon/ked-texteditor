@@ -104,7 +104,16 @@ impl EditBuffer {
             self.cur_y = y
         }
     }
-    fn set_window(&mut self, mut win: Window) {
+    fn replace_char(&mut self, ch: char) {
+        let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
+        line[self.cur_x] = ch;
+        let mut s = String::new();
+        for c in line {
+            s.push(c)
+        }
+        self.buffer[self.cur_y] = s;
+    }
+    fn set_window(&mut self, win: Window) {
         self.window = win;
     }
     fn window(&mut self) -> &mut Window {
@@ -139,14 +148,14 @@ impl EditBuffer {
     }
 }
 
-fn run_viewer_with_file(file_name: &str, mut win: Window) {
+fn run_viewer_with_file(file_name: &str, win: Window) {
     let mut buf = EditBuffer::new(win.clone());
     buf.load_file(file_name);
     buf.set_window(win);
 
     let stdin = stdin();
     let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
-    //    let mut stdout = stdout().into_raw_mode().unwrap();
+    // let mut stdout = stdout().into_raw_mode().unwrap();
     write!(stdout, "{}", clear::All).unwrap();
     write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
     stdout.flush().unwrap();
@@ -223,6 +232,10 @@ fn run_viewer_with_file(file_name: &str, mut win: Window) {
                 .unwrap();
                 stdout.flush().unwrap();
             }
+            Ok(event::Key::Char(c)) => {
+                buf.replace_char(c);
+                buf.redraw(begin, &mut stdout);
+            }
             _ => {}
         }
     }
@@ -253,7 +266,7 @@ fn main() {
             width: width,
             height: height,
         };
-        let mut editor_win = Window {
+        let editor_win = Window {
             x: 1,
             y: 1,
             width: screen.width,
