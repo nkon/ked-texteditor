@@ -336,17 +336,42 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                     buf.window().set_cur_x(u_x);
                     buf.redraw_cursor(&mut stdout);
                 } else if buf.cur_x() == 0 {
-                    buf.set_cur_y(buf.cur_y() - 1);
-                    buf.set_cur_x(buf.buffer[buf.cur_y].len() + 1);
-                    buf.update_win_cur();
-                    buf.redraw_cursor(&mut stdout);
+                    if buf.cur_y() != 0 {
+                        if buf.window().cur_y == 0 {
+                            buf.scrolldown(1);
+                            buf.update_win_cur();
+                            buf.set_cur_x(buf.buffer[buf.cur_y].len()+1);
+                            buf.update_win_cur();
+                            buf.redraw(&mut stdout);
+                        } else {
+                            buf.set_cur_y(buf.cur_y() - 1);
+                            buf.set_cur_x(buf.buffer[buf.cur_y].len() + 1);
+                            buf.update_win_cur();
+                            buf.redraw_cursor(&mut stdout);    
+                        }
+                    }
                 }
             }
             Ok(event::Key::Right) => {
-                buf.set_cur_x(buf.cur_x() + 1);
-                let u_x = buf.cur_x() as u16;
-                buf.window().set_cur_x(u_x);
-                buf.redraw_cursor(&mut stdout);
+                if buf.cur_x() >= buf.buffer[buf.cur_y].len() {
+                    if buf.window().cur_y >= buf.window.height - 1 {
+                        buf.scrollup(1);
+                        buf.update_win_cur();
+                        buf.set_cur_x(0);
+                        buf.update_win_cur();
+                        buf.redraw(&mut stdout);
+                    } else {
+                        buf.set_cur_y(buf.cur_y() + 1);
+                        buf.set_cur_x(0);
+                        buf.update_win_cur();
+                        buf.redraw_cursor(&mut stdout);    
+                    }
+                } else {
+                    buf.set_cur_x(buf.cur_x() + 1);
+                    let u_x = buf.cur_x() as u16;
+                    buf.window().set_cur_x(u_x);
+                    buf.redraw_cursor(&mut stdout);
+                }
             }
             Ok(event::Key::Delete) => {
                 buf.delete_char();
