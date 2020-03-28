@@ -175,18 +175,33 @@ impl EditBuffer {
             self.buffer.insert(self.cur_y+1, line2);
             self.cur_x = 0;
             self.cur_y += 1;
-            self.update_win_cur();
         } else if self.buffer[self.cur_y].len() == 0 {  // insert NEWLINE on the blank line.
             self.buffer.insert(self.cur_y+1, String::from(""));
             self.cur_x = 0;
             self.cur_y += 1;
-            self.update_win_cur();
         } else if self.buffer[self.cur_y].len() == self.cur_x {  // append NEW line.
             self.buffer.insert(self.cur_y+1, String::from(""));
             self.cur_x = 0;
             self.cur_y += 1;
-            self.update_win_cur();
         }
+        self.update_win_cur();
+    }
+    fn delete_char(&mut self) {
+        if self.buffer[self.cur_y].len() > self.cur_x { // delete char between existing line.
+            let mut line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
+            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x+1..]);
+            line1.push_str(&line2);
+            self.buffer[self.cur_y] = line1;
+        } else if self.buffer[self.cur_y].len() == 0 {  // delete blank line.
+            self.buffer.remove(self.cur_y);
+            self.cur_x = 0;
+        } else if self.buffer[self.cur_y].len() == self.cur_x {  // delete NEWLINE at the end of line -> join to the next line.
+            let mut line1 = String::from(&self.buffer[self.cur_y]);
+            line1.push_str(&self.buffer[self.cur_y+1]);
+            self.buffer.remove(self.cur_y+1);
+            self.buffer[self.cur_y] = line1;
+        }
+        self.update_win_cur();
     }
     fn set_window(&mut self, win: Window) {
         self.window = win;
@@ -316,6 +331,10 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
                 let u_x = buf.cur_x() as u16;
                 buf.window().set_cur_x(u_x);
                 buf.redraw_cursor(&mut stdout);
+            }
+            Ok(event::Key::Delete) => {
+                buf.delete_char();
+                buf.redraw(&mut stdout);
             }
             Ok(event::Key::Char(c)) => {
                 if c == '\n' {
