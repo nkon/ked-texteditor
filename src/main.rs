@@ -68,7 +68,7 @@ struct StatusBar {
 impl StatusBar {
     fn redraw(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         let mut bar = String::from("");
-        for i in 0..self.window.width {
+        for _ in 0..self.window.width {
             bar.push(' ');
         }
         bar.replace_range(0..self.file_name.len(), &self.file_name);
