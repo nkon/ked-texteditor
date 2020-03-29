@@ -244,8 +244,11 @@ impl EditBuffer {
     pub fn insert_newline(&mut self) {
         if self.current_line_len() > self.cur_x {
             // insert NEWLINE between existing line.
-            let line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
-            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x..]);
+            let mut line2 = self.buffer[self.cur_y].clone();
+            let mut line1 = String::new();
+            for _ in 0..self.cur_x {
+                line1.push(line2.remove(0));
+            }
             self.buffer[self.cur_y] = line1;
             self.buffer.insert(self.cur_y + 1, line2);
             self.cur_x = 0;
