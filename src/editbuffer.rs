@@ -269,20 +269,25 @@ impl EditBuffer {
     pub fn delete_char(&mut self) {
         if self.current_line_len() > self.cur_x {
             // delete char between existing line.
-            let mut line1 = String::from(&self.buffer[self.cur_y][0..self.cur_x]);
-            let line2 = String::from(&self.buffer[self.cur_y][self.cur_x + 1..]);
-            line1.push_str(&line2);
-            self.buffer[self.cur_y] = line1;
+            let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
+            line.remove(self.cur_x);
+            let mut line2 = String::new();
+            for c in line {
+                line2.push(c);
+            }
+            self.buffer[self.cur_y] = line2;
         } else if self.current_line_len() == 0 {
             // delete blank line.
             self.buffer.remove(self.cur_y);
             self.cur_x = 0;
         } else if self.current_line_len() == self.cur_x {
-            // delete NEWLINE at the end of line -> join to the next line.
-            let mut line1 = String::from(&self.buffer[self.cur_y]);
-            line1.push_str(&self.buffer[self.cur_y + 1]);
-            self.buffer.remove(self.cur_y + 1);
-            self.buffer[self.cur_y] = line1;
+            if self.cur_y < self.buffer.len() -1 {
+                // delete NEWLINE at the end of line -> join to the next line.
+                let mut line1 = String::from(&self.buffer[self.cur_y]);
+                line1.push_str(&self.buffer[self.cur_y + 1]);
+                self.buffer.remove(self.cur_y + 1);
+                self.buffer[self.cur_y] = line1;
+            }
         }
         self.update_win_cur();
     }
