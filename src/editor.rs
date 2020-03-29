@@ -20,19 +20,18 @@ impl Editor {
             status: status,
         }
     }
-    pub fn run_editor_with_file(&mut self, file_name: &str) {
+    pub fn run_editor_with_file(&mut self, file_name: &str, debug_mode: bool) {
         self.buf.load_file(file_name);
         self.status.set_file_name(file_name);
 
         let stdin = stdin();
-        // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
-        let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", clear::All).unwrap();
         write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();
 
         self.buf.redraw(&mut stdout);
-
+        self.status.redraw(&mut stdout);
         for c in stdin.keys() {
             match c {
                 Ok(event::Key::Ctrl('c')) => break,
@@ -84,7 +83,9 @@ impl Editor {
                 }
                 _ => {}
             }
-            // buf.disp_params(&mut stdout);
+            if debug_mode {
+                self.buf.disp_params(&mut stdout);
+            }
             self.status.redraw(&mut stdout);
             write!(
                 stdout,

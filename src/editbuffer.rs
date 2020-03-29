@@ -160,7 +160,6 @@ impl EditBuffer {
             self.window().set_cur_x(u_x);
             self.redraw_cursor(output);
         }
-
     }
     pub fn replace_char(&mut self, ch: char) {
         self.set_cur_x(self.cur_x);
@@ -281,36 +280,33 @@ impl EditBuffer {
         .unwrap();
         output.flush().unwrap();
     }
-    // fn disp_params(&self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-    //     write!(output, "{}", cursor::Goto(60, 1)).unwrap();
-    //     write!(
-    //         output,
-    //         "screen({},{})",
-    //         self.window.screen().width, self.window.screen().height
-    //     )
-    //     .unwrap();
-    //     write!(output, "{}", cursor::Goto(60, 2)).unwrap();
-    //     write!(
-    //         output,
-    //         "win cur({},{})        ",
-    //         self.window.cur_x, self.window.cur_y
-    //     )
-    //     .unwrap();
-    //     write!(output, "{}", cursor::Goto(60, 3)).unwrap();
-    //     write!(
-    //         output,
-    //         "buf cur({},{}) begin={}        ",
-    //         self.cur_x, self.cur_y, self.begin
-    //     )
-    //     .unwrap();
+    pub fn disp_params(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        write!(output, "{}", cursor::Goto(60, 1)).unwrap();
+        let win_x = self.window.screen().width;
+        let win_y = self.window.screen().height;
+        write!(output, "screen({},{})", win_x, win_y).unwrap();
+        write!(output, "{}", cursor::Goto(60, 2)).unwrap();
+        write!(
+            output,
+            "win cur({},{})        ",
+            self.window.cur_x(),
+            self.window.cur_y()
+        )
+        .unwrap();
+        write!(output, "{}", cursor::Goto(60, 3)).unwrap();
+        write!(
+            output,
+            "buf cur({},{}) begin={}        ",
+            self.cur_x, self.cur_y, self.begin
+        )
+        .unwrap();
 
-    //     write!(
-    //         output,
-    //         "{}",
-    //         cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())
-    //     )
-    //     .unwrap();
-    //     output.flush().unwrap();
-    // }
+        write!(
+            output,
+            "{}",
+            cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y())
+        )
+        .unwrap();
+        output.flush().unwrap();
+    }
 }
-

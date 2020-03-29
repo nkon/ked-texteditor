@@ -15,6 +15,7 @@ fn main() {
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help");
+    opts.optflag("d", "debug", "debug mode");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -37,6 +38,6 @@ fn main() {
         let status_win = Window::new(1, height - 1, screen.width, 2, screen);
         let status_bar = StatusBar::new(status_win);
         let mut editor = Editor::new(editor_win, status_bar);
-        editor.run_editor_with_file(&input_file_name);
+        editor.run_editor_with_file(&input_file_name, matches.opt_present("d"));
     }
 }
