@@ -58,11 +58,11 @@ impl EditBuffer {
     }
     /// set cursor x position on the buffer coodinate.
     pub fn set_cur_x(&mut self, x: usize) {
-        if x <= self.buffer[self.cur_y].len() {
+        if x <= self.current_line_len() {
             self.cur_x = x;
         } else {
-            if self.buffer[self.cur_y].len() > 0 {
-                self.cur_x = self.buffer[self.cur_y].len();
+            if self.current_line_len() > 0 {
+                self.cur_x = self.current_line_len();
             } else {
                 self.cur_x = 0;
             }
@@ -70,6 +70,7 @@ impl EditBuffer {
     }
     pub fn update_win_cur(&mut self) {
         self.calc_line();
+        self.set_cur_x(self.cur_x);
         let mut cursor_x = 0;
         for i in 0..self.cur_x {
             cursor_x += self.cache_width[i];
@@ -215,7 +216,7 @@ impl EditBuffer {
     }
     pub fn insert_char(&mut self, ch: char) {
         self.set_cur_x(self.cur_x);
-        if self.current_line_len() > 0 {
+        if self.current_line_len() > 0 {  // insert char on the existing line
             let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
             line.insert(self.cur_x, ch);
             let mut s = String::new();
@@ -224,12 +225,18 @@ impl EditBuffer {
             }
             self.cur_x += 1;
             self.buffer[self.cur_y] = s;
-            self.window.set_cur_x(self.cur_x as u16);
+            self.calc_line();
+            let mut cursor_x = 0;
+            for i in 0..self.cur_x {
+                cursor_x += self.cache_width[i];
+            }
+            self.window.set_cur_x(cursor_x as u16);
             self.window.set_cur_y(self.cur_y as u16);
-        } else {
+        } else {  // insert char on the blank line
             self.buffer[self.cur_y] = String::new();
             self.buffer[self.cur_y].push(ch);
             self.cur_x = 1;
+            self.calc_line();
             self.window.set_cur_x(self.cur_x as u16);
             self.window.set_cur_y(self.cur_y as u16);
         }
