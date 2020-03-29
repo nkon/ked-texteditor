@@ -120,6 +120,12 @@ ked/
 
 ## 日本語の取り扱い
 
+今の時代、日本語・他言語対応はUTF-8に対応させておけばいいだろう。
+
+Rustの場合、文字列を表すString型はUTF-8エンコードされたバイト列なので、Stringをそのまま使える。ただし、`String::chars().count()`は文字数を返すが、`String::len()`はバイト数を返す。こういった使い分けに注意すれば、絵文字などの多バイトUTF-8も、標準ライブラリがうまくハンドリングできる。同様に、`String`は`[]`で添字アクセスできないが`[..]`でスライスアクセスできる。スライスアクセスの時の添字はバイト列に対して働く。表示の文字幅を数えるためにはunicode-width crateが使える。
+
+[https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html](https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html)
+
 ### 表示（UTF-8）
 
 ### IME

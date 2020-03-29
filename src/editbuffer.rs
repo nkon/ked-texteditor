@@ -6,16 +6,20 @@ use std::io::{BufRead, BufReader};
 
 use std::str;
 
+use unicode_width::*;
+
 use crate::*;
 
 /// Edit buffer. current impriment is Vec<String>
 pub struct EditBuffer {
     buffer: Vec<String>,
     begin: usize, // line to start display
-    cur_x: usize, // 0-index-ed buffer coodinates.
+    cur_x: usize, // 0-index-ed buffer coodinates. char counting.
     cur_y: usize,
     file_name: String,
     window: Window, // Window information is cloned at the initalizing.
+    cache_width: Vec<usize>,
+    cache_size: Vec<usize>,
 }
 
 impl EditBuffer {
@@ -27,6 +31,8 @@ impl EditBuffer {
             cur_y: 0,
             file_name: String::from(""),
             window: win,
+            cache_width: vec![] as Vec<usize>,
+            cache_size: vec![] as Vec<usize>,
         }
     }
     pub fn load_file(&mut self, file_name: &str) {
@@ -62,7 +68,12 @@ impl EditBuffer {
         }
     }
     pub fn update_win_cur(&mut self) {
-        self.window.set_cur_x(self.cur_x as u16);
+        self.calc_line();
+        let mut cursor_x = 0;
+        for i in 0..self.cur_x {
+            cursor_x += self.cache_width[i];
+        }
+        self.window.set_cur_x(cursor_x as u16);
         if self.cur_y >= self.begin {
             self.window.set_cur_y((self.cur_y - self.begin) as u16);
         }
@@ -81,7 +92,7 @@ impl EditBuffer {
         self.begin
     }
     pub fn current_line_len(&self) -> usize {
-        self.buffer[self.cur_y].len()
+        self.buffer[self.cur_y].chars().count()
     }
     pub fn scrollup(&mut self, n: usize) {
         if self.begin < self.buffer.len() - self.window.height() as usize + n {
@@ -107,6 +118,16 @@ impl EditBuffer {
         self.update_win_cur();
         self.redraw_cursor(output);
     }
+    fn calc_line(&mut self) {
+        self.cache_size = vec![];
+        self.cache_width = vec![];
+        for uni_c in self.buffer[self.cur_y].chars() {
+            self.cache_size.push(uni_c.len_utf8());
+            self.cache_width.push(uni_c.width().unwrap());
+        }
+        self.cache_width.push(0); // dummy for newline
+        self.cache_size.push(0); // dummy for newline
+    }
     pub fn cursor_up(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         if self.cur_y() > self.begin() {
             self.set_cur_y(self.cur_y() - 1);
@@ -118,22 +139,30 @@ impl EditBuffer {
         }
     }
     pub fn cursor_left(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        self.calc_line();
         if self.cur_x() > 0 {
+            // move to prev char
             self.set_cur_x(self.cur_x() - 1);
-            let u_x = self.cur_x() as u16;
-            self.window().set_cur_x(u_x);
+            let mut cursor_x = 0;
+            for i in 0..self.cur_x {
+                cursor_x += self.cache_width[i];
+            }
+            self.window().set_cur_x(cursor_x as u16);
             self.redraw_cursor(output);
         } else if self.cur_x() == 0 {
+            // cursor is top of the line
             if self.cur_y() != 0 {
                 if self.window().cur_y() == 0 {
+                    // scroll down and goto end of prev line
                     self.scrolldown(1);
                     self.update_win_cur();
-                    self.set_cur_x(self.current_line_len() + 1);
+                    self.set_cur_x(self.current_line_len());
                     self.update_win_cur();
                     self.redraw(output);
                 } else {
+                    // goto end of prev line
                     self.set_cur_y(self.cur_y() - 1);
-                    self.set_cur_x(self.current_line_len() + 1);
+                    self.set_cur_x(self.current_line_len());
                     self.update_win_cur();
                     self.redraw_cursor(output);
                 }
@@ -141,23 +170,32 @@ impl EditBuffer {
         }
     }
     pub fn cursor_right(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        self.calc_line();
         if self.cur_x() >= self.current_line_len() {
+            // cursor is end of the line
             if self.window().cur_y() >= self.window().height() - 1 {
+                // scroll up and goto top of next line
                 self.scrollup(1);
-                self.update_win_cur();
                 self.set_cur_x(0);
                 self.update_win_cur();
                 self.redraw(output);
             } else {
-                self.set_cur_y(self.cur_y() + 1);
-                self.set_cur_x(0);
-                self.update_win_cur();
-                self.redraw_cursor(output);
+                if self.cur_y < self.buffer.len() - 1 {
+                    // goto top of next line
+                    self.set_cur_y(self.cur_y() + 1);
+                    self.set_cur_x(0);
+                    self.update_win_cur();
+                    self.redraw_cursor(output);
+                }
             }
         } else {
+            // move to next char
             self.set_cur_x(self.cur_x() + 1);
-            let u_x = self.cur_x() as u16;
-            self.window().set_cur_x(u_x);
+            let mut cursor_x = 0;
+            for i in 0..self.cur_x {
+                cursor_x += self.cache_width[i];
+            }
+            self.window().set_cur_x(cursor_x as u16);
             self.redraw_cursor(output);
         }
     }

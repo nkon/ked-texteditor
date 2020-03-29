@@ -25,7 +25,8 @@ impl Editor {
         self.status.set_file_name(file_name);
 
         let stdin = stdin();
-        let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", clear::All).unwrap();
         write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();
