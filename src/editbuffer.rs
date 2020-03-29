@@ -103,6 +103,71 @@ impl EditBuffer {
             }
         }
     }
+    pub fn cursor_down(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        if self.cur_y() >= self.begin() + self.window().height() as usize - 1 {
+            self.scrollup(1);
+            self.redraw(output);
+        } else {
+            self.set_cur_y(self.cur_y() + 1);
+        }
+        self.update_win_cur();
+        self.redraw_cursor(output);
+    }
+    pub fn cursor_up(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        if self.cur_y() > self.begin() {
+            self.set_cur_y(self.cur_y() - 1);
+            self.update_win_cur();
+            self.redraw_cursor(output);
+        } else {
+            self.scrolldown(1);
+            self.redraw(output);
+        }
+    }
+    pub fn cursor_left(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        if self.cur_x() > 0 {
+            self.set_cur_x(self.cur_x() - 1);
+            let u_x = self.cur_x() as u16;
+            self.window().set_cur_x(u_x);
+            self.redraw_cursor(output);
+        } else if self.cur_x() == 0 {
+            if self.cur_y() != 0 {
+                if self.window().cur_y() == 0 {
+                    self.scrolldown(1);
+                    self.update_win_cur();
+                    self.set_cur_x(self.current_line_len() + 1);
+                    self.update_win_cur();
+                    self.redraw(output);
+                } else {
+                    self.set_cur_y(self.cur_y() - 1);
+                    self.set_cur_x(self.current_line_len() + 1);
+                    self.update_win_cur();
+                    self.redraw_cursor(output);
+                }
+            }
+        }
+    }
+    pub fn cursor_right(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        if self.cur_x() >= self.current_line_len() {
+            if self.window().cur_y() >= self.window().height() - 1 {
+                self.scrollup(1);
+                self.update_win_cur();
+                self.set_cur_x(0);
+                self.update_win_cur();
+                self.redraw(output);
+            } else {
+                self.set_cur_y(self.cur_y() + 1);
+                self.set_cur_x(0);
+                self.update_win_cur();
+                self.redraw_cursor(output);
+            }
+        } else {
+            self.set_cur_x(self.cur_x() + 1);
+            let u_x = self.cur_x() as u16;
+            self.window().set_cur_x(u_x);
+            self.redraw_cursor(output);
+        }
+
+    }
     pub fn replace_char(&mut self, ch: char) {
         self.set_cur_x(self.cur_x);
         if self.current_line_len() > 0 {

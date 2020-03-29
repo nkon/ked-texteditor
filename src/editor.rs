@@ -4,9 +4,6 @@ use termion::raw::IntoRawMode;
 use termion::screen::AlternateScreen;
 use termion::*;
 
-use getopts::Options;
-use std::env;
-
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -57,68 +54,16 @@ impl Editor {
                     self.status.toggle_insert_mode();
                 }
                 Ok(event::Key::Down) => {
-                    if self.buf.cur_y() >= self.buf.begin() + self.buf.window().height() as usize - 1 {
-                        self.buf.scrollup(1);
-                        self.buf.redraw(&mut stdout);
-                    } else {
-                        self.buf.set_cur_y(self.buf.cur_y() + 1);
-                    }
-                    self.buf.update_win_cur();
-                    self.buf.redraw_cursor(&mut stdout);
+                    self.buf.cursor_down(&mut stdout);
                 }
                 Ok(event::Key::Up) => {
-                    if self.buf.cur_y() > self.buf.begin() {
-                        self.buf.set_cur_y(self.buf.cur_y() - 1);
-                        self.buf.update_win_cur();
-                        self.buf.redraw_cursor(&mut stdout);
-                    } else {
-                        self.buf.scrolldown(1);
-                        self.buf.redraw(&mut stdout);
-                    }
+                    self.buf.cursor_up(&mut stdout);
                 }
                 Ok(event::Key::Left) => {
-                    if self.buf.cur_x() > 0 {
-                        self.buf.set_cur_x(self.buf.cur_x() - 1);
-                        let u_x = self.buf.cur_x() as u16;
-                        self.buf.window().set_cur_x(u_x);
-                        self.buf.redraw_cursor(&mut stdout);
-                    } else if self.buf.cur_x() == 0 {
-                        if self.buf.cur_y() != 0 {
-                            if self.buf.window().cur_y() == 0 {
-                                self.buf.scrolldown(1);
-                                self.buf.update_win_cur();
-                                self.buf.set_cur_x(self.buf.current_line_len() + 1);
-                                self.buf.update_win_cur();
-                                self.buf.redraw(&mut stdout);
-                            } else {
-                                self.buf.set_cur_y(self.buf.cur_y() - 1);
-                                self.buf.set_cur_x(self.buf.current_line_len() + 1);
-                                self.buf.update_win_cur();
-                                self.buf.redraw_cursor(&mut stdout);
-                            }
-                        }
-                    }
+                    self.buf.cursor_left(&mut stdout);
                 }
                 Ok(event::Key::Right) => {
-                    if self.buf.cur_x() >= self.buf.current_line_len() {
-                        if self.buf.window().cur_y() >= self.buf.window().height() - 1 {
-                            self.buf.scrollup(1);
-                            self.buf.update_win_cur();
-                            self.buf.set_cur_x(0);
-                            self.buf.update_win_cur();
-                            self.buf.redraw(&mut stdout);
-                        } else {
-                            self.buf.set_cur_y(self.buf.cur_y() + 1);
-                            self.buf.set_cur_x(0);
-                            self.buf.update_win_cur();
-                            self.buf.redraw_cursor(&mut stdout);
-                        }
-                    } else {
-                        self.buf.set_cur_x(self.buf.cur_x() + 1);
-                        let u_x = self.buf.cur_x() as u16;
-                        self.buf.window().set_cur_x(u_x);
-                        self.buf.redraw_cursor(&mut stdout);
-                    }
+                    self.buf.cursor_right(&mut stdout);
                 }
                 Ok(event::Key::Delete) => {
                     self.buf.delete_char();

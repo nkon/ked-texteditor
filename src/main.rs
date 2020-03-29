@@ -1,16 +1,6 @@
-use std::io::{stdin, stdout, Write};
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::screen::AlternateScreen;
 use termion::*;
-
 use getopts::Options;
 use std::env;
-
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
-use std::str;
 
 use ked::*;
 
