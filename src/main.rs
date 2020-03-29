@@ -65,6 +65,7 @@ struct EditBuffer {
     begin: usize, // line to start display
     cur_x: usize, // 0-index-ed buffer coodinates.
     cur_y: usize,
+    file_name: String,
     window: Window, // Window information is cloned at the initalizing.
 }
 
@@ -75,6 +76,7 @@ impl EditBuffer {
             begin: 0,
             cur_x: 0,
             cur_y: 0,
+            file_name: String::from(""),
             window: win,
         }
     }
@@ -83,6 +85,14 @@ impl EditBuffer {
             match result {
                 Ok(s) => self.buffer.push(s.clone()),
                 Err(_) => self.buffer.push(String::new()),
+            }
+        }
+        self.file_name = String::from(file_name)
+    }
+    fn save_file(&mut self) {
+        if let Ok(mut file) = File::create(self.file_name.clone()) {
+            for line in &self.buffer {
+                writeln!(file, "{}", line).unwrap();
             }
         }
     }
@@ -304,6 +314,9 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
     for c in stdin.keys() {
         match c {
             Ok(event::Key::Ctrl('c')) => break,
+            Ok(event::Key::Ctrl('s')) => {
+                buf.save_file();
+            }
             Ok(event::Key::PageDown) => {
                 buf.scrollup(1);
                 buf.redraw(&mut stdout);
