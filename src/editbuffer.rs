@@ -42,7 +42,8 @@ impl EditBuffer {
                 Err(_) => self.buffer.push(String::new()),
             }
         }
-        self.file_name = String::from(file_name)
+        self.file_name = String::from(file_name);
+        self.calc_line();
     }
     pub fn save_file(&mut self) {
         if let Ok(mut file) = File::create(self.file_name.clone()) {
@@ -87,6 +88,7 @@ impl EditBuffer {
         if y < self.buffer.len() {
             self.cur_y = y
         }
+        self.calc_line();
     }
     pub fn begin(&self) -> usize {
         self.begin
@@ -139,7 +141,6 @@ impl EditBuffer {
         }
     }
     pub fn cursor_left(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        self.calc_line();
         if self.cur_x() > 0 {
             // move to prev char
             self.set_cur_x(self.cur_x() - 1);
@@ -170,7 +171,6 @@ impl EditBuffer {
         }
     }
     pub fn cursor_right(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        self.calc_line();
         if self.cur_x() >= self.current_line_len() {
             // cursor is end of the line
             if self.window().cur_y() >= self.window().height() - 1 {
