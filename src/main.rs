@@ -18,7 +18,7 @@ fn print_usage(program: &str, opts: Options) {
 }
 
 /// Get terminal information and hold.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Screen {
     width: u16,
     height: u16,
@@ -56,6 +56,54 @@ impl Window {
         if y < self.height {
             self.cur_y = y
         }
+    }
+}
+
+struct StatusBar {
+    file_name: String,
+    insert_mode_flag: bool,
+    window: Window,
+}
+
+impl StatusBar {
+    fn redraw(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        let mut bar = String::from("");
+        for i in 0..self.window.width {
+            bar.push(' ');
+        }
+        bar.replace_range(0..self.file_name.len(), &self.file_name);
+        bar.replace_range(
+            bar.len() - 3..bar.len(),
+            if self.insert_mode_flag == true {
+                "Ins"
+            } else {
+                "Ovr"
+            },
+        );
+
+        write!(
+            output,
+            "{}{}{}{}{}{}{}",
+            cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y()),
+            color::Fg(color::Black),
+            color::Bg(color::White),
+            bar,
+            color::Fg(color::White),
+            color::Bg(color::Black),
+            cursor::Show,
+        )
+        .unwrap();
+        output.flush().unwrap();
+    }
+    fn toggle_insert_mode(&mut self) {
+        if self.insert_mode_flag {
+            self.insert_mode_flag = false;
+        } else {
+            self.insert_mode_flag = true;
+        }
+    }
+    fn set_file_name(&mut self, file_name: &str) {
+        self.file_name = String::from(file_name);
     }
 }
 
@@ -297,10 +345,11 @@ impl EditBuffer {
     }
 }
 
-fn run_viewer_with_file(file_name: &str, win: Window) {
+fn run_editor_with_file(file_name: &str, win: Window, mut status: StatusBar) {
     let mut buf = EditBuffer::new(win.clone());
     buf.load_file(file_name);
     buf.set_window(win);
+    status.set_file_name(file_name);
 
     let stdin = stdin();
     // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
@@ -324,6 +373,9 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
             Ok(event::Key::PageUp) => {
                 buf.scrolldown(1);
                 buf.redraw(&mut stdout);
+            }
+            Ok(event::Key::Insert) => {
+                status.toggle_insert_mode();
             }
             Ok(event::Key::Down) => {
                 if buf.cur_y() >= buf.begin + buf.window.height as usize - 1 {
@@ -395,19 +447,33 @@ fn run_viewer_with_file(file_name: &str, win: Window) {
             }
             Ok(event::Key::Char(c)) => {
                 if c == '\n' {
-                    buf.insert_newline();
-                    buf.redraw(&mut stdout);
+                    if status.insert_mode_flag {
+                        buf.insert_newline();
+                        buf.redraw(&mut stdout);
+                    }
                 } else {
-                    // buf.replace_char(c);
-                    buf.insert_char(c);
+                    if status.insert_mode_flag {
+                        buf.insert_char(c);
+                    } else {
+                        buf.replace_char(c);
+                        buf.set_cur_y(buf.cur_x()+1);
+                    }
                     buf.redraw(&mut stdout);
                 }
             }
             _ => {}
         }
         buf.disp_params(&mut stdout);
+        status.redraw(&mut stdout);
+        write!(
+            stdout,
+            "{}",
+            cursor::Goto(buf.window().scr_cur_x(), buf.window().scr_cur_y())
+        )
+        .unwrap();
+        stdout.flush().unwrap();
     }
-    write!(stdout, "{}", termion::cursor::Show).unwrap();
+    write!(stdout, "{}", cursor::Show).unwrap();
 }
 
 fn main() {
@@ -443,6 +509,20 @@ fn main() {
             cur_y: 0,
             screen: screen,
         };
-        run_viewer_with_file(&input_file_name, editor_win);
+        let status_win = Window {
+            x: 1,
+            y: height - 1,
+            width: screen.width,
+            height: 2,
+            cur_x: 0,
+            cur_y: 0,
+            screen: screen,
+        };
+        let status_bar = StatusBar {
+            file_name: String::from(""),
+            insert_mode_flag: true,
+            window: status_win,
+        };
+        run_editor_with_file(&input_file_name, editor_win, status_bar);
     }
 }
