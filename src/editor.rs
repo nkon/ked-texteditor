@@ -11,6 +11,7 @@ use crate::*;
 pub struct Editor {
     buf: EditBuffer,
     status: StatusBar,
+    prompt_mode: bool,
 }
 
 impl Editor {
@@ -18,9 +19,12 @@ impl Editor {
         Editor {
             buf: EditBuffer::new(win),
             status: status,
+            prompt_mode: false,
         }
     }
     pub fn run_editor_with_new_buffer(&mut self, debug_mode: bool) {
+        self.buf.new_buffer();
+        self.status.set_file_name("[NEW FILE]");
         self.run_editor(debug_mode);
     }
     pub fn run_editor_with_new_file(&mut self, file_name: &str, debug_mode: bool) {

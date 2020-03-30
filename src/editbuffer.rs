@@ -27,7 +27,7 @@ impl EditBuffer {
         Self {
             buffer: vec![] as Vec<String>,
             begin: 0,
-            cur_x: 0,
+            cur_x: 0, // cursor point of the buffer(0-indexed)
             cur_y: 0,
             file_name: String::from(""),
             window: win,
@@ -51,6 +51,12 @@ impl EditBuffer {
                 writeln!(file, "{}", line).unwrap();
             }
         }
+    }
+    pub fn new_buffer(&mut self) {
+        self.buffer = vec![String::from("")];
+    }
+    pub fn file_name(&self) -> &str {
+        &self.file_name
     }
     /// return cursor x position on the buffer coodinate.
     pub fn cur_x(&self) -> usize {
@@ -213,7 +219,8 @@ impl EditBuffer {
     }
     pub fn insert_char(&mut self, ch: char) {
         self.set_cur_x(self.cur_x);
-        if self.current_line_len() > 0 {  // insert char on the existing line
+        if self.current_line_len() > 0 {
+            // insert char on the existing line
             let mut line: Vec<char> = self.buffer[self.cur_y].clone().chars().collect();
             line.insert(self.cur_x, ch);
             let mut s = String::new();
@@ -229,7 +236,8 @@ impl EditBuffer {
             }
             self.window.set_cur_x(cursor_x as u16);
             self.window.set_cur_y(self.cur_y as u16);
-        } else {  // insert char on the blank line
+        } else {
+            // insert char on the blank line
             self.buffer[self.cur_y] = String::new();
             self.buffer[self.cur_y].push(ch);
             self.cur_x = 1;
@@ -278,7 +286,7 @@ impl EditBuffer {
             self.buffer.remove(self.cur_y);
             self.cur_x = 0;
         } else if self.current_line_len() == self.cur_x {
-            if self.cur_y < self.buffer.len() -1 {
+            if self.cur_y < self.buffer.len() - 1 {
                 // delete NEWLINE at the end of line -> join to the next line.
                 let mut line1 = String::from(&self.buffer[self.cur_y]);
                 line1.push_str(&self.buffer[self.cur_y + 1]);
@@ -363,12 +371,18 @@ impl EditBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use super::*;
+    use crate::*;
+    use std::io::stdout;
+    use termion::raw::IntoRawMode;
+
     #[test]
     fn load_file_existing_file() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
         buf.load_file("src/main.rs");
         assert_eq!(buf.file_name, "src/main.rs");
@@ -376,10 +390,13 @@ mod tests {
 
     #[test]
     fn set_cur_x_1() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("12345");
         buf.set_cur_y(0);
         buf.set_cur_x(5);
@@ -388,10 +405,13 @@ mod tests {
 
     #[test]
     fn set_cur_x_truncated() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("12345");
         buf.set_cur_y(0);
         buf.set_cur_x(6);
@@ -399,10 +419,13 @@ mod tests {
     }
     #[test]
     fn set_cur_x_wchar() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("あいうえお");
         buf.set_cur_y(0);
         buf.set_cur_x(5);
@@ -410,10 +433,13 @@ mod tests {
     }
     #[test]
     fn set_cur_x_wchar_truncated() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("あいうえお");
         buf.set_cur_y(0);
         buf.set_cur_x(6);
@@ -422,10 +448,13 @@ mod tests {
 
     #[test]
     fn current_line_len_1() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("12345");
         buf.set_cur_y(0);
         assert_eq!(buf.current_line_len(), 5); // truncated.
@@ -433,10 +462,13 @@ mod tests {
 
     #[test]
     fn current_line_len_wchar() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("あいうえお");
         buf.set_cur_y(0);
         assert_eq!(buf.current_line_len(), 5); // truncated.
@@ -444,13 +476,69 @@ mod tests {
 
     #[test]
     fn current_line_len_wchar_2() {
-        let screen = Screen{width: 80, height: 25};
-        let window = Window::new(1,1,80,24, screen);
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.new_buffer();
         buf.buffer[0] = String::from("🍎🍊🍣❤👉");
         buf.set_cur_y(0);
         assert_eq!(buf.current_line_len(), 5); // truncated.
     }
-
+    #[test]
+    fn cursor_down_1() {
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.new_buffer();
+        buf.buffer[0] = String::from("12345");
+        buf.buffer.push(String::from(""));
+        buf.set_cur_y(0);
+        buf.set_cur_x(2);
+        buf.cursor_down(&mut stdout);
+        assert_eq!(buf.cur_x(), 0);
+        assert_eq!(buf.cur_y(), 1);
+    }
+    #[test]
+    fn cursor_down_2() {
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.new_buffer();
+        buf.buffer[0] = String::from("12345");
+        buf.buffer.push(String::from("あいう"));
+        buf.set_cur_y(0);
+        buf.set_cur_x(5);
+        buf.cursor_down(&mut stdout);
+        assert_eq!(buf.cur_x(), 3);
+        assert_eq!(buf.cur_y(), 1);
+    }
+    #[test]
+    fn cursor_down_3() {
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.new_buffer();
+        buf.buffer[0] = String::from("あいうえお");
+        buf.buffer.push(String::from("1234567890"));
+        buf.set_cur_y(0);
+        buf.set_cur_x(5);
+        buf.cursor_down(&mut stdout);
+        assert_eq!(buf.cur_x(), 5);
+        assert_eq!(buf.cur_y(), 1);
+    }
 }
