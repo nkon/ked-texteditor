@@ -2,6 +2,7 @@ use termion::*;
 use getopts::Options;
 use std::env;
 use std::path::Path;
+use serde::{Deserialize, Serialize};
 
 use ked::*;
 
@@ -37,7 +38,17 @@ fn main() {
         let status_bar = StatusBar::new(status_win);
         let mut editor = Editor::new(editor_win, status_bar);
 
-        if matches.free.is_empty() {
+        // let s = vec![MacroCommand{name: String::from("aaa"), arg: 1},MacroCommand{name: String::from("bbb"), arg: 2},MacroCommand{name: String::from("ccc"), arg: 3}];
+        // let sss = serde_json::to_string(&s).unwrap();
+        // println!("{}", sss);
+
+        if matches.opt_present("s") {
+            let script_file = matches.opt_str("s").unwrap();
+            let reader = std::io::BufReader::new(std::fs::File::open(script_file).unwrap());
+            let s: Vec<MacroCommand> = serde_json::from_reader(reader).unwrap();
+            println!("{:?}", s);
+            editor.run_script(&s);
+        } else if matches.free.is_empty() {
             editor.run_editor_with_new_buffer(matches.opt_present("d"));
         } else {
             let input_file_name = matches.free[0].clone();

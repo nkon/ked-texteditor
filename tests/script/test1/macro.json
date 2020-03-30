@@ -1,0 +1,31 @@
+[{
+        "name": "new_buffer",
+        "arg": 1,
+        "argstr": "tests/japanese.txt"
+    },
+    {
+        "name": "insert_char",
+        "arg": 1,
+        "argstr": "a"
+    },
+    {
+        "name": "insert_char",
+        "arg": 1,
+        "argstr": "b"
+    },
+    {
+        "name": "insert_char",
+        "arg": 1,
+        "argstr": "c"
+    },
+    {
+        "name": "insert_char",
+        "arg": 1,
+        "argstr": "d"
+    },
+    {
+        "name": "insert_char",
+        "arg": 1,
+        "argstr": "e"
+    }
+]

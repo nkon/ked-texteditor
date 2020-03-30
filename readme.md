@@ -39,7 +39,91 @@ TUIアプリケーションの基礎となるのが、ターミナルが解釈�
 
 端末をRAWモードにすれば、キー入力に対するエコーバックや改行入力の特別扱いがなくなり、アプリケーションでキー入力を直接ハンドリングすることができる。出力も、エコーバックが無くなるのでアプリケーションから自前で制御しなければならない。文字出力だけでなくエスケープシーケンスを出力することで、カーソル移動、色の変更などもできる。アプリ終了時にはCOOKEDモードに戻してあげよう。
 
+すべての入力がアプリに吸い取られるので、アプリがキー入力で自発的に終了できるようにしておかないと、終了手段がなくなる。
+
 基本的にはこれだけでTUIアプリケーションを作ることができる。
+
+
+### 基本的なファイルビューワ
+
+インクリメンタル開発での初期のコードをコメント付きで。だいたい雰囲気がわかると思う。
+
+```rust
+use std::io::{stdin, stdout, Write};
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+use termion::*;
+
+use getopts::Options;
+use std::env;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+use std::str;
+
+fn print_usage(program: &str, opts: Options) {
+    let brief = format!("Usage: {} [options] FILE", program);
+    print!("{}", opts.usage(&brief));
+}
+
+fn run_viewer_with_file(file_name: &str) {
+
+    let mut lines = Vec::<String>::new();
+
+    // ファイルを読み込んで行の配列に格納する。
+    for result in BufReader::new(File::open(file_name).unwrap()).lines() {
+        lines.push(result.unwrap().clone());
+    }
+
+    let stdin = stdin();
+    let mut stdout = stdout().into_raw_mode().unwrap();        // RAWモードにする。
+    write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap(); // 画面をクリア、カーソル消去
+    write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();         // カーソルを左上(1,1)に移動
+    stdout.flush().unwrap();
+
+    let mut y = 0 as usize;
+
+    for l in lines {                                            // カーソルを行頭に移動して行を出力
+        write!(stdout, "{}{}",
+            cursor::Goto(1, y as u16 +1),
+            l,
+        ).unwrap();
+        y = y+1;
+        stdout.flush().unwrap();
+    }
+
+    for c in stdin.keys() {                                       // キー入力ハンドラ
+        match c {
+            Ok(event::Key::Ctrl('c')) => break,                   // Ctrl-Cで終了
+            _ => {}
+        }
+    }
+    write!(stdout, "{}", termion::cursor::Show).unwrap();         // もとに戻す
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let program = args[0].clone();
+
+    let mut opts = Options::new();                                 // getopts でオプション解析
+    opts.optflag("h", "help", "print this help");
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => m,
+        Err(f) => panic!(f.to_string()),
+    };
+    if matches.opt_present("h") {
+        print_usage(&program, opts);
+        return;
+    }
+    if matches.free.is_empty() {
+        print_usage(&program, opts);
+    } else {                                                         // 引数で与えられたファイルを表示する
+        let input_file_name = matches.free[0].clone();
+        run_viewer_with_file(&input_file_name);
+    }
+}
+```
 
 ### 表示ウィンドウ
 
@@ -85,7 +169,9 @@ TUIアプリケーションの基礎となるのが、ターミナルが解釈�
 
 「頻繁な操作は軽く、希な操作は重くても良い」というトレード・オフを具現化したデータ構造。プログラミング初心者のころに雑誌の記事で読んで、感心した記憶がある。
 
-#### Rope
+[https://en.wikipedia.org/wiki/Gap_buffer](https://en.wikipedia.org/wiki/Gap_buffer)
+
+#### Rope / PieceTable
 
 代表例はVS Code。
 
@@ -97,6 +183,9 @@ TUIアプリケーションの基礎となるのが、ターミナルが解釈�
 
 追記型なので、物理メモリではなく仮想メモリに割り当てておけば巨大ファイルも編集可能になるのだろうか。書き込み単位ごとにメモリ小片ができあがるのでUndoとの相性が良さそうだ。小片ごとに属性（構文ハイライトなど）も付けやすいというメリットもあるかもしれない。
 
+[https://en.wikipedia.org/wiki/Piece_table](https://en.wikipedia.org/wiki/Piece_table)
+[https://en.wikipedia.org/wiki/Rope_(data_structure)](https://en.wikipedia.org/wiki/Rope_(data_structure))
+
 ### 日本語の取り扱い（UTF-8）
 
 今の時代、日本語・他言語対応はUTF-8に対応させておけばいいだろう。
@@ -107,7 +196,18 @@ Rustの場合、文字列を表すString型はUTF-8エンコードされたバ�
 
 [https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html](https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html)
 
-
+```rust
+fn calc_line(&mut self) {
+    self.cache_size = vec![];
+    self.cache_width = vec![];
+    for uni_c in self.buffer[self.cur_y].chars() {     // 行が変わるごとに行をスキャンする
+        self.cache_size.push(uni_c.len_utf8());        // 各文字ごとのバイトサイズ
+        self.cache_width.push(uni_c.width().unwrap()); // 各文字ごとの表示幅を調べてキャッシュしておく
+    }
+    self.cache_width.push(0); // dummy for newline
+    self.cache_size.push(0);  // dummy for newline
+}
+```
 
 ### IME
 
@@ -118,6 +218,14 @@ Rustの場合、文字列を表すString型はUTF-8エンコードされたバ�
 ### インクリメンタルな開発
 
 [Cコンパイラの作成](https://nkon.github.io/Compiler/)を通じて、すっかり、インクリメンタルな開発の信奉者になった。
+
+最初に設計をしておかなければグチャグチャになる、とはよく言われる。しかし、テストしながら動作確認がきちんとできていればリファクタリングは怖くない。うまく改造できなければGitで戻れば良い。そして、大概のプログラマはそんなに馬鹿でないので、それほどグチャグチャにはならない。
+
+それよりも、動いて動作が確認できている状態を維持しづつけることが大事。一期に大きなプログラムを作って、バグがあることを見つけ、バグの箇所を特定し、修正するのは、非常に時間のロスになる。
+
+ある程度規模が大きな開発の場合は「設計が決まってないと…」ということもある。そういった場合でも、最初のうちは少人数の精鋭で集中して、コーディングの時間をきちんと確保して、書きながら設計を固めるのが良い。あなたのチームはエースに1ヶ月集中してコーディングさせることはできるだろうか？エースにはコーディングさせることが、もっとも給料に見合った成果を得られる。動作状態を維持できるようになったら、人を増やして良い。
+
+世の中の偉大なプログラム（LinuxやFirefroxなど）がエクセル仕様書からできあがったと思っている人はいないだろう。これらはみんな、インクリメンタルに開発されている。
 
 ### 開発環境
 
@@ -147,6 +255,8 @@ APIは実装＆リファクタリングを進めていくうえで、自然に�
 * `lib.rs`では、必要なモジュールを読み込んでpublicにエクスポートする。
 * それぞれのファイル（小文字.rs）には構造体（キャメルケース）と実装を定義し、必要なメソッド（スネークケース）を`pub`にする。
 
+Rustのユニットテストはバイナリークレート（`fn main`を起点に実行される）には適用できない。ライブラリクレート（他の実行主体から呼ばれる）に対して適用される。同一のプロジェクトに対して、`main.rs`は、ほぼ`fn main()`のみを含む。それと並列に`lib.rs`を作り、ライブラリとして個々のモジュールを読み込む。これがアプリケーションの標準的なパターンだ。
+
 ```
 ked/
 + Cargo.toml
@@ -157,7 +267,7 @@ ked/
     + lib.rs      テストしやすいようにするために、main.rs からモジュールを切り出し、lib.rsでまとめてライブラリとして扱えるようにする。
     + XXXXXXX.rs  個々のモジュール
 + tests/          結合テスト用のディレクトリ。
-+ target/   コンパイラの生成物。.gitignore される。
++ target/         コンパイラの生成物。.gitignore される。
     + 
 ```
 
@@ -171,11 +281,9 @@ ked/
 
 Rustは言語機能にユニットテストが統合されているため、簡単にユニットテストを行うことができる。各モジュールのファイルに、次のようにテストを記述していけば良い。関数単位で入出力を確認するのがユニットテストだ。
 
-テストは、コードの共用化を考えずにベタ書きすることが多いので、製品のコードの3倍ぐらいテストコードがあることが一般的だろう。
+テストは、コードの共用化を考えずにベタ書きすることが多いので、製品のコードの3倍ぐらいテストコードがあることが一般的だろう。今回の例では`editbuffer.rs`の後半部分にユニットテストが書かれている。
 
 ```
-// 通常のコード
-
 #[cfg(test)]
 mod tests {
     use super::*;

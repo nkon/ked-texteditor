@@ -111,4 +111,59 @@ impl Editor {
         }
         write!(stdout, "{}", cursor::Show).unwrap();
     }
+    pub fn run_script(&mut self, script: &Vec<MacroCommand>) {
+        let stdin = stdin();
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
+        write!(stdout, "{}", clear::All).unwrap();
+        write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
+        stdout.flush().unwrap();
+
+        self.buf.redraw(&mut stdout);
+        self.status.redraw(&mut stdout);
+
+        for cmd in script {
+            match cmd.name.as_str() {
+                "new_buffer" => {
+                    self.buf.new_buffer();
+                    self.status.set_file_name("[NEW FILE]");
+                    println!("{}", "new_buffer");
+                }
+                "open_file" => {
+                    self.buf.load_file(&cmd.argstr);
+                    self.status.set_file_name(&cmd.argstr);
+                    println!("{} {}", "open_file", cmd.argstr);
+                }
+                "cursor_up" => {
+                    self.buf.cursor_up(&mut stdout);
+                }
+                "cursor_down" => {
+                    self.buf.cursor_down(&mut stdout);
+                }
+                "cursor_left" => {
+                    self.buf.cursor_left(&mut stdout);
+                }
+                "cursor_right" => {
+                    self.buf.cursor_right(&mut stdout);
+                }
+                "insert_char" => {
+                    self.buf.insert_char(cmd.argstr.chars().nth(0).unwrap());
+                    self.buf.redraw(&mut stdout);
+                    println!("{} {}", "insert_char", cmd.argstr.chars().nth(0).unwrap());
+                }
+                "break" => {
+                    break;
+                }
+                _ => {}
+            }
+            self.status.redraw(&mut stdout);
+            write!(
+                stdout,
+                "{}",
+                cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
+            )
+            .unwrap();
+            stdout.flush().unwrap();
+        }
+    }
 }

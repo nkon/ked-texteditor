@@ -372,7 +372,6 @@ impl EditBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::*;
     use std::io::stdout;
     use termion::raw::IntoRawMode;
 
