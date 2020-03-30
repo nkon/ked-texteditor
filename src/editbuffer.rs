@@ -91,9 +91,6 @@ impl EditBuffer {
         }
         self.calc_line();
     }
-    pub fn begin(&self) -> usize {
-        self.begin
-    }
     pub fn current_line_len(&self) -> usize {
         self.buffer[self.cur_y].chars().count()
     }
@@ -112,7 +109,7 @@ impl EditBuffer {
         }
     }
     pub fn cursor_down(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        if self.cur_y() >= self.begin() + self.window().height() as usize - 1 {
+        if self.cur_y() >= self.begin + self.window().height() as usize - 1 {
             self.scrollup(1);
             self.redraw(output);
         } else {
@@ -132,7 +129,7 @@ impl EditBuffer {
         self.cache_size.push(0); // dummy for newline
     }
     pub fn cursor_up(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        if self.cur_y() > self.begin() {
+        if self.cur_y() > self.begin {
             self.set_cur_y(self.cur_y() - 1);
             self.update_win_cur();
             self.redraw_cursor(output);
@@ -362,4 +359,98 @@ impl EditBuffer {
         .unwrap();
         output.flush().unwrap();
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+    use super::*;
+    #[test]
+    fn load_file_existing_file() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        assert_eq!(buf.file_name, "src/main.rs");
+    }
+
+    #[test]
+    fn set_cur_x_1() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("12345");
+        buf.set_cur_y(0);
+        buf.set_cur_x(5);
+        assert_eq!(buf.cur_x, 5);
+    }
+
+    #[test]
+    fn set_cur_x_truncated() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("12345");
+        buf.set_cur_y(0);
+        buf.set_cur_x(6);
+        assert_eq!(buf.cur_x, 5); // truncated.
+    }
+    #[test]
+    fn set_cur_x_wchar() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("あいうえお");
+        buf.set_cur_y(0);
+        buf.set_cur_x(5);
+        assert_eq!(buf.cur_x, 5); // truncated.
+    }
+    #[test]
+    fn set_cur_x_wchar_truncated() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("あいうえお");
+        buf.set_cur_y(0);
+        buf.set_cur_x(6);
+        assert_eq!(buf.cur_x, 5); // truncated.
+    }
+
+    #[test]
+    fn current_line_len_1() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("12345");
+        buf.set_cur_y(0);
+        assert_eq!(buf.current_line_len(), 5); // truncated.
+    }
+
+    #[test]
+    fn current_line_len_wchar() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("あいうえお");
+        buf.set_cur_y(0);
+        assert_eq!(buf.current_line_len(), 5); // truncated.
+    }
+
+    #[test]
+    fn current_line_len_wchar_2() {
+        let screen = Screen{width: 80, height: 25};
+        let window = Window::new(1,1,80,24, screen);
+        let mut buf = EditBuffer::new(window);
+        buf.load_file("src/main.rs");
+        buf.buffer[0] = String::from("🍎🍊🍣❤👉");
+        buf.set_cur_y(0);
+        assert_eq!(buf.current_line_len(), 5); // truncated.
+    }
+
 }

@@ -20,10 +20,19 @@ impl Editor {
             status: status,
         }
     }
+    pub fn run_editor_with_new_buffer(&mut self, debug_mode: bool) {
+        self.run_editor(debug_mode);
+    }
+    pub fn run_editor_with_new_file(&mut self, file_name: &str, debug_mode: bool) {
+        self.status.set_file_name(file_name);
+        self.run_editor(debug_mode);
+    }
     pub fn run_editor_with_file(&mut self, file_name: &str, debug_mode: bool) {
         self.buf.load_file(file_name);
         self.status.set_file_name(file_name);
-
+        self.run_editor(debug_mode);
+    }
+    fn run_editor(&mut self, debug_mode: bool) {
         let stdin = stdin();
         let mut stdout = stdout().into_raw_mode().unwrap();
         // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
