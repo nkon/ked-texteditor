@@ -127,12 +127,13 @@ impl Editor {
                 "new_buffer" => {
                     self.buf.new_buffer();
                     self.status.set_file_name("[NEW FILE]");
-                    println!("{}", "new_buffer");
                 }
                 "open_file" => {
                     self.buf.load_file(&cmd.argstr);
                     self.status.set_file_name(&cmd.argstr);
-                    println!("{} {}", "open_file", cmd.argstr);
+                }
+                "save_file_as" => {
+                    self.buf.save_file_as(&cmd.argstr);
                 }
                 "cursor_up" => {
                     self.buf.cursor_up(&mut stdout);
@@ -149,7 +150,6 @@ impl Editor {
                 "insert_char" => {
                     self.buf.insert_char(cmd.argstr.chars().nth(0).unwrap());
                     self.buf.redraw(&mut stdout);
-                    println!("{} {}", "insert_char", cmd.argstr.chars().nth(0).unwrap());
                 }
                 "break" => {
                     break;

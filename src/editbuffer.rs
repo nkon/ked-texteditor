@@ -52,6 +52,13 @@ impl EditBuffer {
             }
         }
     }
+    pub fn save_file_as(&mut self, file_name: &str) {
+        if let Ok(mut file) = File::create(file_name) {
+            for line in &self.buffer {
+                writeln!(file, "{}", line).unwrap();
+            }
+        }
+    }
     pub fn new_buffer(&mut self) {
         self.buffer = vec![String::from("")];
     }
