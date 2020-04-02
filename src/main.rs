@@ -34,7 +34,8 @@ fn main() {
             height: height,
         };
         let editor_win = Window::new(1, 1, screen.width, screen.height - 2, screen);
-        let status_win = Window::new(1, height - 1, screen.width, 2, screen);
+        let status_win = Window::new(1, height - 1, screen.width, 1, screen);
+        let prompt_win = Window::new(1, height, screen.width, 1, screen);
         let status_bar = StatusBar::new(status_win);
         let mut editor = Editor::new(editor_win, status_bar);
 

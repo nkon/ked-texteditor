@@ -1,7 +1,7 @@
 [{
         "name": "new_buffer",
         "arg": 1,
-        "argstr": "tests/japanese.txt"
+        "argstr": ""
     },
     {
         "name": "insert_char",
@@ -27,5 +27,10 @@
         "name": "insert_char",
         "arg": 1,
         "argstr": "e"
+    },
+    {
+        "name": "save_file_as",
+        "arg": 1,
+        "argstr": "tests/script/test1/output.txt"
     }
 ]
