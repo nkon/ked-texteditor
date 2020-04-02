@@ -249,7 +249,7 @@ APIは実装＆リファクタリングを進めていくうえで、自然に�
 
 ### Rustプロジェクトのディレクトリ構造
 
-これも、ほとんど標準化されている。
+ほとんど標準化されている。
 
 * `main.rs`には`fn main()`と必要最小限のみ書く。
 * `lib.rs`では、必要なモジュールを読み込んでpublicにエクスポートする。
@@ -302,7 +302,83 @@ Doc-testとして関数のコメント中に入出力条件を記載してもよ
 
 ### 結合テスト
 
-統合テストを実施するための、アーキテクチャ設計が必要だ。本プログラムではマクロ機能。ユーザ機能としても使えるがテストに使いやすいように、というのが設計の主眼だ。キーボードマクロをJSONファイルとして読み込んで、エディタが自動実行される。キーボードマクロによる編集結果が期待値と同じかどうかがテストの判定となる。MVCモデルがきちんとできていて、モデルのAPIが制定できていれば、キーボードマクロの実装は難しくない。APIを次々と呼ぶだけである。
+統合テストを実施するための、アーキテクチャ設計が必要だ。rustでは結合テストとして、lib.rsに対するテスト機能を持っている。
+
+ここでは、それ以外のプログラムの実行結果そのものを評価する外部テストについて考える。ここで作るエディタはマクロ機能を持っている。キー操作をマクロ機能として定義し、キー操作の結果として得られた編集結果を期待値と比較することでテストが可能だ。マクロ機能は、ユーザ機能としても使えるがテストに使いやすいように、というのが実装した主な理由だ。キーボードマクロをJSONファイルとして読み込んで、エディタが自動実行される。キーボードマクロによる編集結果が期待値と同じかどうかがテストの判定となる。MVCモデルがきちんとできていて、モデルのAPIが制定できていれば、キーボードマクロの実装は難しくない。APIを次々と呼ぶだけである。
+
+RustではJSONファイルの読み込みはserdeというクレートを使って行われる。構造体に`Deserialize`属性をderiveしておいて`selde_json`で読みこめばよい。
+
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MacroCommand {
+    pub name: String,
+    pub arg: usize,
+    pub argstr: String,
+}
+
+let reader = std::io::BufReader::new(std::fs::File::open(script_file).unwrap());
+let s: Vec<MacroCommand> = serde_json::from_reader(reader).unwrap();
+
+`cargo test`としたときの自動実行について。まず`tests/`に適当なrustファイルを用意する。その関数に`#[tset]`属性を付けた関数を作成する。この関数が`cargo test`した時に呼ばれる。`std::process:Command`を利用してシェルスクリプトを実行する。その中でマクロでエディタを動作させ`diff`で期待値と比較する。NGだったら`assert`が失敗するようにしておけば、テストとしていい感じに実行される。
+
+```rust
+use std::fs;
+use std::process::Command;
+
+#[test]
+fn find_dir_and_run() {
+    println!("macro_tests_runner.rs");
+    
+    let target = "./tests/script/";
+    for entry in fs::read_dir(target).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_dir() {
+            let mut scr_file = path.display().to_string();
+            scr_file.push_str("/run.sh");
+            let status = Command::new(&scr_file).status().unwrap();
+            assert!(status.success());
+        }
+    }
+}
+```
+
+`macro.json`の例。見たまんんまだが、新規バッファを開き、`abcde`と入力し、ファイルに名前をつけて保存する。
+
+```json
+[{"name": "new_buffer","arg": 1,"argstr": ""},
+ {"name": "insert_char","arg": 1,"argstr": "a"},
+ {"name": "insert_char","arg": 1,"argstr": "b"},
+ {"name": "insert_char","arg": 1,"argstr": "c"},
+ {"name": "insert_char","arg": 1,"argstr": "d"},
+ {"name": "insert_char","arg": 1,"argstr": "e"},
+ {"name": "save_file_as","arg": 1,"argstr": "tests/script/test1/output.txt"}]
+```
+
+`tests/script/test1/run.sh`の例。マクロで生成された結果ファイル(`output.txt`)と期待値ファイル(`output_ok.txt`)を比較している。
+
+```
+#!/bin/sh
+
+DIR=tests/script/test1
+cargo run -- -s $DIR/macro.json 
+diff $DIR/output.txt $DIR/output_ok.txt
+if [ "$?" -eq 0 ]
+then
+    echo "OK"
+    exit 0
+else
+    echo "******************** TEST FAIL *************************"
+    exit 1
+fi
+```
+
+
+
+
+
 
 ### アサーション
 

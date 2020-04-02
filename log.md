@@ -117,9 +117,9 @@
 * Serdeの導入。JSON形式のマクロの読み込み。
 * マクロの実行機能。
 
-###
+### b0193e9054dae8042e6c56e151f2d372c77f82ac
 
-* `cargo test`からの結合テストランナー。
+* `cargo test`からの結合テストランナー。`tests/macro_test_runner.rs`
 
 
 ### 

@@ -1,36 +1,9 @@
-[{
-        "name": "new_buffer",
-        "arg": 1,
-        "argstr": ""
-    },
-    {
-        "name": "insert_char",
-        "arg": 1,
-        "argstr": "a"
-    },
-    {
-        "name": "insert_char",
-        "arg": 1,
-        "argstr": "b"
-    },
-    {
-        "name": "insert_char",
-        "arg": 1,
-        "argstr": "c"
-    },
-    {
-        "name": "insert_char",
-        "arg": 1,
-        "argstr": "d"
-    },
-    {
-        "name": "insert_char",
-        "arg": 1,
-        "argstr": "e"
-    },
-    {
-        "name": "save_file_as",
-        "arg": 1,
-        "argstr": "tests/script/test1/output.txt"
-    }
+[
+    {"name": "new_buffer","arg": 1,"argstr": ""},
+    {"name": "insert_char","arg": 1,"argstr": "a"},
+    {"name": "insert_char","arg": 1,"argstr": "b"},
+    {"name": "insert_char","arg": 1,"argstr": "c"},
+    {"name": "insert_char","arg": 1,"argstr": "d"},
+    {"name": "insert_char","arg": 1,"argstr": "e"},
+    {"name": "save_file_as","arg": 1,"argstr": "tests/script/test1/output.txt"}
 ]
