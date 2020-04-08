@@ -8,18 +8,28 @@ use std::str;
 
 use crate::*;
 
+enum AfterPrompt {
+    SaveFileAs,
+}
+
 pub struct Editor {
     buf: EditBuffer,
     status: StatusBar,
+    prompt: Prompt,
+    input: String,
     prompt_mode: bool,
+    after_prompt: Option<AfterPrompt>,
 }
 
 impl Editor {
-    pub fn new(win: Window, status: StatusBar) -> Self {
+    pub fn new(win: Window, status: StatusBar, prompt: Prompt) -> Self {
         Editor {
             buf: EditBuffer::new(win),
             status: status,
+            prompt: prompt,
+            input: String::from(""),
             prompt_mode: false,
+            after_prompt: None,
         }
     }
     pub fn run_editor_with_new_buffer(&mut self, debug_mode: bool) {
@@ -46,6 +56,14 @@ impl Editor {
 
         self.buf.redraw(&mut stdout);
         self.status.redraw(&mut stdout);
+        write!(
+            stdout,
+            "{}",
+            cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
+        )
+        .unwrap();
+        write!(stdout, "{}", cursor::Show).unwrap();
+        stdout.flush().unwrap();
         for c in stdin.keys() {
             if self.prompt_mode == false {
                 match c {
@@ -55,6 +73,8 @@ impl Editor {
                     }
                     Ok(event::Key::Ctrl('a')) => {
                         self.prompt_mode = true;
+                        self.after_prompt = Some(AfterPrompt::SaveFileAs);
+                        self.prompt.redraw(&mut stdout);
                     }
                     Ok(event::Key::PageDown) => {
                         self.buf.scrollup(1);
@@ -117,13 +137,46 @@ impl Editor {
                     Ok(event::Key::Ctrl('c')) => {
                         self.prompt_mode = false;
                     }
+                    Ok(event::Key::Backspace) => {
+                        self.prompt.backspace();
+                        self.prompt.redraw(&mut stdout);
+                    }
                     Ok(event::Key::Char(c)) => {
                         if c == '\n' {
+                            self.prompt_mode = false;
+                            self.input = String::from(self.prompt.result());
+                            self.prompt.clear(&mut stdout);
+                            self.status.redraw(&mut stdout);
+                            write!(
+                                stdout,
+                                "{}",
+                                cursor::Goto(
+                                    self.buf.window().scr_cur_x(),
+                                    self.buf.window().scr_cur_y()
+                                )
+                            )
+                            .unwrap();
+                            stdout.flush().unwrap();
+                            match &mut self.after_prompt {
+                                Some(x) => {
+                                    match x {
+                                        AfterPrompt::SaveFileAs => {
+                                            self.buf.save_file_as(&self.input);
+                                        }
+                                    }
+                                    self.after_prompt = None;
+                                }
+                                None => {}
+                            }
                         } else {
+                            self.prompt.push(c);
+                            self.prompt.redraw(&mut stdout);
+                            stdout.flush().unwrap();
                         }
                     }
                     _ => {}
                 }
+                stdout.flush().unwrap();
             }
         }
         write!(stdout, "{}", cursor::Show).unwrap();

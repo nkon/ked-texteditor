@@ -37,7 +37,8 @@ fn main() {
         let status_win = Window::new(1, height - 1, screen.width, 1, screen);
         let prompt_win = Window::new(1, height, screen.width, 1, screen);
         let status_bar = StatusBar::new(status_win);
-        let mut editor = Editor::new(editor_win, status_bar);
+        let prompt_box = Prompt::new(prompt_win);
+        let mut editor = Editor::new(editor_win, status_bar, prompt_box);
 
         if matches.opt_present("s") {
             let script_file = matches.opt_str("s").unwrap();

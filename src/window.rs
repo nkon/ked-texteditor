@@ -59,4 +59,10 @@ impl Window {
     pub fn screen(&mut self) -> &Screen {
         &self.screen
     }
+    pub fn x(&self) -> u16 {
+        self.x
+    }
+    pub fn y(&self) -> u16 {
+        self.y
+    }
 }
