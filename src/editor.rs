@@ -73,6 +73,7 @@ impl Editor {
                     }
                     Ok(event::Key::Ctrl('a')) => {
                         self.prompt_mode = true;
+                        self.prompt.set_prompt("File Save As: ");
                         self.after_prompt = Some(AfterPrompt::SaveFileAs);
                         self.prompt.redraw(&mut stdout);
                     }
@@ -182,9 +183,8 @@ impl Editor {
         write!(stdout, "{}", cursor::Show).unwrap();
     }
     pub fn run_script(&mut self, script: &Vec<MacroCommand>) {
-        let stdin = stdin();
-        let mut stdout = stdout().into_raw_mode().unwrap();
-        // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
+        // let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", clear::All).unwrap();
         write!(stdout, "{}", cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();

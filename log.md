@@ -122,8 +122,8 @@
 * `cargo test`からの結合テストランナー。`tests/macro_test_runner.rs`
 
 
-### 
+### 538bc158783df75bfe51e32594ff7add2b0ad5df
 
 * プロンプトモードの導入
-* Save As...機能の実装
+* 'Save As...'機能の実装
 

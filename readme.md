@@ -211,7 +211,7 @@ fn calc_line(&mut self) {
 
 ### モーダルインプット
 
-たとえば、新規保存するファイル名など、編集操作ではなく、ユーザから文字列の入力が必要な場面がある。このような場合、すでに端末をRAWモードにしているので、COOKEDモードで提供されている文字列編集の機能(バックスペースやエンターで確定など)はすべて自前で実装しなおさなければならない。ミニエディタを実装して埋め込む感じだ。
+たとえば、新規保存するファイル名など、キー入力による編集操作ではなく、ユーザから文字列の入力が必要な場面がある。このような場合、すでに端末をRAWモードにしているので、COOKEDモードで提供されている文字列編集の機能（バックスペースやエンターで確定など）はすべて自前で実装しなおさなければならない。ミニラインエディタを実装して埋め込む感じだ。
 
 ### IME
 
@@ -249,10 +249,17 @@ VS Codeの上で開発したのだが、非常に便利。
 
 printfデバッグをするといっても、テキストエディタを作っているので標準出力はRAWモードになっていて画面表示に使われている。そこにデバッグ出力を表示しても画面が乱れてよくわからない。
 
-* `eprintln!`でデバッグログを`stdout`に出力するようにする。
-* `cargo run -- -optio 2> log.txt` のように`stdout`をファイルに落とす。
+* `eprintln!`でデバッグログを`stderr`へ出力するようにする。
+* `cargo run -- -option 2> log.txt` のように`stderr`をファイルに落とす。
 * 別のウィンドウで`tail -f log.txt`のようにデバッグログをモニタする。
 
+次のようなスクリプト`run.sh`を作っておけば便利だ。
+
+```bash
+#!/bin/bash
+gnome-terminal -- tail -f log.txt &
+cargo build && gnome-terminal --geometry=132x43 -- bash -c "cargo run -- $* 2> log.txt"
+```
 
 ## アーキテクチャの設計
 
@@ -372,7 +379,7 @@ fn find_dir_and_run() {
  {"name": "save_file_as","arg": 1,"argstr": "tests/script/test1/output.txt"}]
 ```
 
-`tests/script/test1/run.sh`の例。マクロで生成された結果ファイル(`output.txt`)と期待値ファイル(`output_ok.txt`)を比較している。
+`tests/script/test1/run.sh`の例。マクロで生成された結果ファイル（`output.txt`）と期待値ファイル（`output_ok.txt`）を比較している。
 
 ```
 #!/bin/sh

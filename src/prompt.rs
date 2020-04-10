@@ -40,6 +40,11 @@ impl Prompt {
         self.cur_x = 0;
         self.window.set_cur_x(0);
     }
+    pub fn set_prompt(&mut self, prompt_str: &str) {
+        self.prompt = String::from(prompt_str);
+        self.cur_x = self.prompt.len();
+        self.window.set_cur_x(self.cur_x as u16);
+    }
     pub fn backspace(&mut self) {
         self.result.pop();
     }
@@ -52,8 +57,9 @@ impl Prompt {
     pub fn redraw(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
         write!(
             output,
-            "{}{}{}{}",
+            "{}{}{}{}{}",
             cursor::Goto(self.window.x(), self.window.y()),
+            self.prompt,
             self.result,
             cursor::Goto(self.window.scr_cur_x(), self.window.scr_cur_y()),
             cursor::Show,

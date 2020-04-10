@@ -54,12 +54,12 @@ impl EditBuffer {
     }
     pub fn save_file_as(&mut self, file_name: &str) {
         if let Ok(mut file) = File::create(file_name) {
-            eprintln!("safe_file_as:{}", file_name);
+            eprintln!("save_file_as:{}", file_name);
             for line in &self.buffer {
                 writeln!(file, "{}", line).unwrap();
             }
         } else {
-            eprintln!("safe_file_as:can not write:{}", file_name);
+            eprintln!("save_file_as:can not write:{}", file_name);
         }
     }
     pub fn new_buffer(&mut self) {

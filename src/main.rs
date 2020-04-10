@@ -2,7 +2,6 @@ use termion::*;
 use getopts::Options;
 use std::env;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
 use ked::*;
 
