@@ -1,7 +1,7 @@
-use termion::*;
 use getopts::Options;
 use std::env;
 use std::path::Path;
+use termion::*;
 
 use ked::*;
 
@@ -56,4 +56,3 @@ fn main() {
         }
     }
 }
-

@@ -35,10 +35,6 @@ impl EditBuffer {
             cache_size: vec![] as Vec<usize>,
         }
     }
-    /// if file_name exists => load file
-    /// else => create new buffer
-    /// 
-    /// set self.file_name <= file_name
     pub fn load_file(&mut self, file_name: &str) -> Result<&Self, &str> {
         if let Ok(file) = File::open(file_name) {
             for result in BufReader::new(file).lines() {
@@ -54,8 +50,8 @@ impl EditBuffer {
             Err("Cannot load file")
         }
     }
-    pub fn save_file(&mut self) -> Result<&Self,&str> {
-        if self.file_name == ""{
+    pub fn save_file(&mut self) -> Result<&Self, &str> {
+        if self.file_name == "" {
             eprintln!("save_file: No File Name");
             Err("No File Name")
         } else {
@@ -430,7 +426,7 @@ mod tests {
         };
         let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        let file_name = "tests/not_exist.txt";  
+        let file_name = "tests/not_exist.txt";
         assert!(buf.load_file(file_name).is_err());
     }
 
@@ -587,5 +583,4 @@ mod tests {
         assert_eq!(buf.cur_x(), 5);
         assert_eq!(buf.cur_y(), 1);
     }
-
 }

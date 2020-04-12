@@ -9,10 +9,12 @@ use std::str;
 use crate::*;
 
 enum AfterPrompt {
+    None,
     SaveFileAs,
+    ExitY,
 }
 
-enum EditMode{
+enum EditMode {
     Editor,
     Prompt,
     OneKeyInput,
@@ -24,7 +26,7 @@ pub struct Editor {
     prompt: Prompt,
     input: String,
     edit_mode: EditMode,
-    after_prompt: Option<AfterPrompt>,
+    after_prompt: AfterPrompt,
     changed: bool,
 }
 
@@ -36,7 +38,7 @@ impl Editor {
             prompt: prompt,
             input: String::from(""),
             edit_mode: EditMode::Editor,
-            after_prompt: None,
+            after_prompt: AfterPrompt::None,
             changed: false,
         }
     }
@@ -81,14 +83,21 @@ impl Editor {
             match self.edit_mode {
                 EditMode::Editor => {
                     match c {
-                        Ok(event::Key::Ctrl('c')) => break,
+                        Ok(event::Key::Ctrl('c')) => {
+                            if self.changed == true {
+                                self.edit_mode = EditMode::OneKeyInput;
+                                self.prompt.set_prompt("File is modified. Exit? [y/n]");
+                                self.after_prompt = AfterPrompt::ExitY;
+                                self.prompt.redraw(&mut stdout);
+                            }
+                        }
                         Ok(event::Key::Ctrl('s')) => {
                             match self.buf.save_file() {
                                 Err("No File Name") => {
                                     self.edit_mode = EditMode::Prompt;
                                     self.prompt.set_prompt("File Save As: ");
-                                    self.after_prompt = Some(AfterPrompt::SaveFileAs);
-                                    self.prompt.redraw(&mut stdout);        
+                                    self.after_prompt = AfterPrompt::SaveFileAs;
+                                    self.prompt.redraw(&mut stdout);
                                 }
                                 _ => {}
                             }
@@ -98,7 +107,7 @@ impl Editor {
                         Ok(event::Key::Ctrl('a')) => {
                             self.edit_mode = EditMode::Prompt;
                             self.prompt.set_prompt("File Save As: ");
-                            self.after_prompt = Some(AfterPrompt::SaveFileAs);
+                            self.after_prompt = AfterPrompt::SaveFileAs;
                             self.prompt.redraw(&mut stdout);
                         }
                         Ok(event::Key::PageDown) => {
@@ -186,19 +195,14 @@ impl Editor {
                                 .unwrap();
                                 stdout.flush().unwrap();
                                 match &mut self.after_prompt {
-                                    Some(x) => {
-                                        match x {
-                                            AfterPrompt::SaveFileAs => {
-                                                self.buf.save_file_as(&self.input);
-                                                self.status.set_file_name(self.buf.file_name());
-                                                self.status.redraw(&mut stdout);
-                                            }
-
-                                        }
-                                        self.after_prompt = None;
+                                    AfterPrompt::SaveFileAs => {
+                                        self.buf.save_file_as(&self.input);
+                                        self.status.set_file_name(self.buf.file_name());
+                                        self.status.redraw(&mut stdout);
                                     }
-                                    None => {}
+                                    _ => {}
                                 }
+                                self.after_prompt = AfterPrompt::None;
                             } else {
                                 self.prompt.push(c);
                                 self.prompt.redraw(&mut stdout);
@@ -209,19 +213,23 @@ impl Editor {
                     }
                     stdout.flush().unwrap();
                 }
-                EditMode::OneKeyInput => {
-                    match c {
-                        Ok(event::Key::Ctrl('c')) =>{
-                            self.edit_mode = EditMode::Editor;
-                        }
-                        Ok(event::Key::Char(c)) => {
-
-                        }
-                        _ => {}
+                EditMode::OneKeyInput => match c {
+                    Ok(event::Key::Ctrl('c')) => {
+                        self.edit_mode = EditMode::Editor;
                     }
-
-                }
-            }   
+                    Ok(event::Key::Char(c)) => {
+                        match &mut self.after_prompt {
+                            AfterPrompt::ExitY => {
+                                if c == 'y' || c == '\n' {
+                                    break;
+                                }
+                            }  
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                },
+            }
         }
         write!(stdout, "{}", cursor::Show).unwrap();
     }
@@ -247,6 +255,9 @@ impl Editor {
                 }
                 "save_file_as" => {
                     self.buf.save_file_as(&cmd.argstr);
+                }
+                "save_file" => {
+                    self.buf.save_file().unwrap();
                 }
                 "cursor_up" => {
                     self.buf.cursor_up(&mut stdout);

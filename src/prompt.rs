@@ -68,11 +68,10 @@ impl Prompt {
         output.flush().unwrap();
     }
     pub fn result(&mut self) -> &str {
-        eprintln!("prompt.rs:result:{}",self.result);
+        eprintln!("prompt.rs:result:{}", self.result);
         &self.result
     }
     pub fn window(&mut self) -> &mut Window {
         &mut self.window
     }
-
 }
