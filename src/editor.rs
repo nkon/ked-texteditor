@@ -44,6 +44,7 @@ impl Editor {
         self.run_editor(debug_mode);
     }
     pub fn run_editor_with_new_file(&mut self, file_name: &str, debug_mode: bool) {
+        self.buf.new_buffer();
         self.status.set_file_name(file_name);
         self.run_editor(debug_mode);
     }

@@ -35,14 +35,22 @@ impl EditBuffer {
             cache_size: vec![] as Vec<usize>,
         }
     }
+    /// if file_name exists => load file
+    /// else => create new buffer
+    /// 
+    /// set self.file_name <= file_name
     pub fn load_file(&mut self, file_name: &str) {
-        for result in BufReader::new(File::open(file_name).unwrap()).lines() {
-            match result {
-                Ok(s) => self.buffer.push(s.clone()),
-                Err(_) => self.buffer.push(String::new()),
-            }
+        if let Ok(file) = File::open(file_name) {
+            for result in BufReader::new(file).lines() {
+                match result {
+                    Ok(s) => self.buffer.push(s.clone()),
+                    Err(_) => self.buffer.push(String::new()),
+                }
+            }    
+        } else {
+            self.new_buffer();
         }
-        self.file_name = String::from(file_name);
+        self.file_name = file_name.to_string();
         self.calc_line();
     }
     pub fn save_file(&mut self) -> Result<bool,&str> {
@@ -410,6 +418,21 @@ mod tests {
         buf.load_file("src/main.rs");
         assert_eq!(buf.file_name, "src/main.rs");
     }
+    #[test]
+    fn load_file_not_exist() {
+        let screen = Screen {
+            width: 80,
+            height: 25,
+        };
+        let window = Window::new(1, 1, 80, 24, screen);
+        let mut buf = EditBuffer::new(window);
+        let file_name = "tests/not_exist.txt";
+        
+        buf.load_file(file_name);
+
+        assert_eq!(buf.file_name(), file_name);
+
+    }
 
     #[test]
     fn set_cur_x_1() {
@@ -564,4 +587,5 @@ mod tests {
         assert_eq!(buf.cur_x(), 5);
         assert_eq!(buf.cur_y(), 1);
     }
+
 }
