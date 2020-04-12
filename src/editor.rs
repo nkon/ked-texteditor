@@ -12,12 +12,18 @@ enum AfterPrompt {
     SaveFileAs,
 }
 
+enum EditMode{
+    Editor,
+    Prompt,
+    YorN,
+}
+
 pub struct Editor {
     buf: EditBuffer,
     status: StatusBar,
     prompt: Prompt,
     input: String,
-    prompt_mode: bool,
+    edit_mode: EditMode,
     after_prompt: Option<AfterPrompt>,
 }
 
@@ -28,7 +34,7 @@ impl Editor {
             status: status,
             prompt: prompt,
             input: String::from(""),
-            prompt_mode: false,
+            edit_mode: EditMode::Editor,
             after_prompt: None,
         }
     }
@@ -65,120 +71,126 @@ impl Editor {
         write!(stdout, "{}", cursor::Show).unwrap();
         stdout.flush().unwrap();
         for c in stdin.keys() {
-            if self.prompt_mode == false {
-                match c {
-                    Ok(event::Key::Ctrl('c')) => break,
-                    Ok(event::Key::Ctrl('s')) => {
-                        self.buf.save_file();
-                    }
-                    Ok(event::Key::Ctrl('a')) => {
-                        self.prompt_mode = true;
-                        self.prompt.set_prompt("File Save As: ");
-                        self.after_prompt = Some(AfterPrompt::SaveFileAs);
-                        self.prompt.redraw(&mut stdout);
-                    }
-                    Ok(event::Key::PageDown) => {
-                        self.buf.scrollup(1);
-                        self.buf.redraw(&mut stdout);
-                    }
-                    Ok(event::Key::PageUp) => {
-                        self.buf.scrolldown(1);
-                        self.buf.redraw(&mut stdout);
-                    }
-                    Ok(event::Key::Insert) => {
-                        self.status.toggle_insert_mode();
-                    }
-                    Ok(event::Key::Down) => {
-                        self.buf.cursor_down(&mut stdout);
-                    }
-                    Ok(event::Key::Up) => {
-                        self.buf.cursor_up(&mut stdout);
-                    }
-                    Ok(event::Key::Left) => {
-                        self.buf.cursor_left(&mut stdout);
-                    }
-                    Ok(event::Key::Right) => {
-                        self.buf.cursor_right(&mut stdout);
-                    }
-                    Ok(event::Key::Delete) => {
-                        self.buf.delete_char();
-                        self.buf.redraw(&mut stdout);
-                    }
-                    Ok(event::Key::Char(c)) => {
-                        if c == '\n' {
-                            if self.status.insert_mode_flag() {
-                                self.buf.insert_newline();
-                                self.buf.redraw(&mut stdout);
-                            }
-                        } else {
-                            if self.status.insert_mode_flag() {
-                                self.buf.insert_char(c);
-                            } else {
-                                self.buf.replace_char(c);
-                                self.buf.set_cur_y(self.buf.cur_x() + 1);
-                            }
+            match self.edit_mode {
+                EditMode::Editor => {
+                    match c {
+                        Ok(event::Key::Ctrl('c')) => break,
+                        Ok(event::Key::Ctrl('s')) => {
+                            self.buf.save_file();
+                        }
+                        Ok(event::Key::Ctrl('a')) => {
+                            self.edit_mode = EditMode::Prompt;
+                            self.prompt.set_prompt("File Save As: ");
+                            self.after_prompt = Some(AfterPrompt::SaveFileAs);
+                            self.prompt.redraw(&mut stdout);
+                        }
+                        Ok(event::Key::PageDown) => {
+                            self.buf.scrollup(1);
                             self.buf.redraw(&mut stdout);
                         }
-                    }
-                    _ => {}
-                }
-                if debug_mode {
-                    self.buf.disp_params(&mut stdout);
-                }
-                self.status.redraw(&mut stdout);
-                write!(
-                    stdout,
-                    "{}",
-                    cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
-                )
-                .unwrap();
-                stdout.flush().unwrap();
-            } else {
-                match c {
-                    Ok(event::Key::Ctrl('c')) => {
-                        self.prompt_mode = false;
-                    }
-                    Ok(event::Key::Backspace) => {
-                        self.prompt.backspace();
-                        self.prompt.redraw(&mut stdout);
-                    }
-                    Ok(event::Key::Char(c)) => {
-                        if c == '\n' {
-                            self.prompt_mode = false;
-                            self.input = String::from(self.prompt.result());
-                            self.prompt.clear(&mut stdout);
-                            self.status.redraw(&mut stdout);
-                            write!(
-                                stdout,
-                                "{}",
-                                cursor::Goto(
-                                    self.buf.window().scr_cur_x(),
-                                    self.buf.window().scr_cur_y()
-                                )
-                            )
-                            .unwrap();
-                            stdout.flush().unwrap();
-                            match &mut self.after_prompt {
-                                Some(x) => {
-                                    match x {
-                                        AfterPrompt::SaveFileAs => {
-                                            self.buf.save_file_as(&self.input);
-                                        }
-                                    }
-                                    self.after_prompt = None;
-                                }
-                                None => {}
-                            }
-                        } else {
-                            self.prompt.push(c);
-                            self.prompt.redraw(&mut stdout);
-                            stdout.flush().unwrap();
+                        Ok(event::Key::PageUp) => {
+                            self.buf.scrolldown(1);
+                            self.buf.redraw(&mut stdout);
                         }
+                        Ok(event::Key::Insert) => {
+                            self.status.toggle_insert_mode();
+                        }
+                        Ok(event::Key::Down) => {
+                            self.buf.cursor_down(&mut stdout);
+                        }
+                        Ok(event::Key::Up) => {
+                            self.buf.cursor_up(&mut stdout);
+                        }
+                        Ok(event::Key::Left) => {
+                            self.buf.cursor_left(&mut stdout);
+                        }
+                        Ok(event::Key::Right) => {
+                            self.buf.cursor_right(&mut stdout);
+                        }
+                        Ok(event::Key::Delete) => {
+                            self.buf.delete_char();
+                            self.buf.redraw(&mut stdout);
+                        }
+                        Ok(event::Key::Char(c)) => {
+                            if c == '\n' {
+                                if self.status.insert_mode_flag() {
+                                    self.buf.insert_newline();
+                                    self.buf.redraw(&mut stdout);
+                                }
+                            } else {
+                                if self.status.insert_mode_flag() {
+                                    self.buf.insert_char(c);
+                                } else {
+                                    self.buf.replace_char(c);
+                                    self.buf.set_cur_y(self.buf.cur_x() + 1);
+                                }
+                                self.buf.redraw(&mut stdout);
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                    if debug_mode {
+                        self.buf.disp_params(&mut stdout);
+                    }
+                    self.status.redraw(&mut stdout);
+                    write!(
+                        stdout,
+                        "{}",
+                        cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
+                    )
+                    .unwrap();
+                    stdout.flush().unwrap();
                 }
-                stdout.flush().unwrap();
-            }
+                EditMode::Prompt => {
+                    match c {
+                        Ok(event::Key::Ctrl('c')) => {
+                            self.edit_mode = EditMode::Editor;
+                        }
+                        Ok(event::Key::Backspace) => {
+                            self.prompt.backspace();
+                            self.prompt.redraw(&mut stdout);
+                        }
+                        Ok(event::Key::Char(c)) => {
+                            if c == '\n' {
+                                self.edit_mode = EditMode::Editor;
+                                self.input = String::from(self.prompt.result());
+                                self.prompt.clear(&mut stdout);
+                                self.status.redraw(&mut stdout);
+                                write!(
+                                    stdout,
+                                    "{}",
+                                    cursor::Goto(
+                                        self.buf.window().scr_cur_x(),
+                                        self.buf.window().scr_cur_y()
+                                    )
+                                )
+                                .unwrap();
+                                stdout.flush().unwrap();
+                                match &mut self.after_prompt {
+                                    Some(x) => {
+                                        match x {
+                                            AfterPrompt::SaveFileAs => {
+                                                self.buf.save_file_as(&self.input);
+                                            }
+                                        }
+                                        self.after_prompt = None;
+                                    }
+                                    None => {}
+                                }
+                            } else {
+                                self.prompt.push(c);
+                                self.prompt.redraw(&mut stdout);
+                                stdout.flush().unwrap();
+                            }
+                        }
+                        _ => {}
+                    }
+                    stdout.flush().unwrap();
+                }
+                EditMode::YorN => {
+
+                }
+            }   
         }
         write!(stdout, "{}", cursor::Show).unwrap();
     }
