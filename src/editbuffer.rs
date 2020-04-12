@@ -45,10 +45,23 @@ impl EditBuffer {
         self.file_name = String::from(file_name);
         self.calc_line();
     }
-    pub fn save_file(&mut self) {
-        if let Ok(mut file) = File::create(self.file_name.clone()) {
-            for line in &self.buffer {
-                writeln!(file, "{}", line).unwrap();
+    pub fn save_file(&mut self) -> Result<bool,&str> {
+        if self.file_name == ""{
+            eprintln!("save_file: No File Name");
+            Err("No File Name")
+        } else {
+            let mut file = File::create(self.file_name.clone());
+            match &mut file {
+                Ok(file) => {
+                    for line in &self.buffer {
+                        writeln!(file, "{}", line).unwrap();
+                    }
+                    Ok(true)
+                }
+                Err(_) => {
+                    eprintln!("Cannot create file:{}", self.file_name);
+                    Err("Cannot create file")
+                }
             }
         }
     }

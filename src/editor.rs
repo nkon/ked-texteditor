@@ -76,7 +76,15 @@ impl Editor {
                     match c {
                         Ok(event::Key::Ctrl('c')) => break,
                         Ok(event::Key::Ctrl('s')) => {
-                            self.buf.save_file();
+                            match self.buf.save_file() {
+                                Err("No File Name") => {
+                                    self.edit_mode = EditMode::Prompt;
+                                    self.prompt.set_prompt("File Save As: ");
+                                    self.after_prompt = Some(AfterPrompt::SaveFileAs);
+                                    self.prompt.redraw(&mut stdout);        
+                                }
+                                _ => {}
+                            }
                         }
                         Ok(event::Key::Ctrl('a')) => {
                             self.edit_mode = EditMode::Prompt;
