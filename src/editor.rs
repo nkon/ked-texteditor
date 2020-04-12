@@ -15,7 +15,7 @@ enum AfterPrompt {
 enum EditMode{
     Editor,
     Prompt,
-    YorN,
+    OneKeyInput,
 }
 
 pub struct Editor {
@@ -25,6 +25,7 @@ pub struct Editor {
     input: String,
     edit_mode: EditMode,
     after_prompt: Option<AfterPrompt>,
+    changed: bool,
 }
 
 impl Editor {
@@ -36,20 +37,25 @@ impl Editor {
             input: String::from(""),
             edit_mode: EditMode::Editor,
             after_prompt: None,
+            changed: false,
         }
     }
     pub fn run_editor_with_new_buffer(&mut self, debug_mode: bool) {
+        eprintln!("run_editor_with_new_buffer");
         self.buf.new_buffer();
         self.status.set_file_name("[NEW FILE]");
         self.run_editor(debug_mode);
     }
     pub fn run_editor_with_new_file(&mut self, file_name: &str, debug_mode: bool) {
+        eprintln!("run_editor_with_new_file");
         self.buf.new_buffer();
+        self.buf.set_file_name(file_name);
         self.status.set_file_name(file_name);
         self.run_editor(debug_mode);
     }
     pub fn run_editor_with_file(&mut self, file_name: &str, debug_mode: bool) {
-        self.buf.load_file(file_name);
+        eprintln!("run_editor_with_file");
+        self.buf.load_file(file_name).unwrap();
         self.status.set_file_name(file_name);
         self.run_editor(debug_mode);
     }
@@ -86,6 +92,8 @@ impl Editor {
                                 }
                                 _ => {}
                             }
+                            self.changed = false;
+                            self.status.set_changed(self.changed);
                         }
                         Ok(event::Key::Ctrl('a')) => {
                             self.edit_mode = EditMode::Prompt;
@@ -135,6 +143,8 @@ impl Editor {
                                 }
                                 self.buf.redraw(&mut stdout);
                             }
+                            self.changed = true;
+                            self.status.set_changed(self.changed);
                         }
                         _ => {}
                     }
@@ -199,7 +209,16 @@ impl Editor {
                     }
                     stdout.flush().unwrap();
                 }
-                EditMode::YorN => {
+                EditMode::OneKeyInput => {
+                    match c {
+                        Ok(event::Key::Ctrl('c')) =>{
+                            self.edit_mode = EditMode::Editor;
+                        }
+                        Ok(event::Key::Char(c)) => {
+
+                        }
+                        _ => {}
+                    }
 
                 }
             }   
@@ -223,7 +242,7 @@ impl Editor {
                     self.status.set_file_name("[NEW FILE]");
                 }
                 "open_file" => {
-                    self.buf.load_file(&cmd.argstr);
+                    self.buf.load_file(&cmd.argstr).unwrap();
                     self.status.set_file_name(&cmd.argstr);
                 }
                 "save_file_as" => {

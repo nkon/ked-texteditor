@@ -39,21 +39,22 @@ impl EditBuffer {
     /// else => create new buffer
     /// 
     /// set self.file_name <= file_name
-    pub fn load_file(&mut self, file_name: &str) {
+    pub fn load_file(&mut self, file_name: &str) -> Result<&Self, &str> {
         if let Ok(file) = File::open(file_name) {
             for result in BufReader::new(file).lines() {
                 match result {
                     Ok(s) => self.buffer.push(s.clone()),
                     Err(_) => self.buffer.push(String::new()),
                 }
-            }    
+            }
+            self.file_name = file_name.to_string();
+            self.calc_line();
+            Ok(self)
         } else {
-            self.new_buffer();
+            Err("Cannot load file")
         }
-        self.file_name = file_name.to_string();
-        self.calc_line();
     }
-    pub fn save_file(&mut self) -> Result<bool,&str> {
+    pub fn save_file(&mut self) -> Result<&Self,&str> {
         if self.file_name == ""{
             eprintln!("save_file: No File Name");
             Err("No File Name")
@@ -64,7 +65,7 @@ impl EditBuffer {
                     for line in &self.buffer {
                         writeln!(file, "{}", line).unwrap();
                     }
-                    Ok(true)
+                    Ok(self)
                 }
                 Err(_) => {
                     eprintln!("Cannot create file:{}", self.file_name);
@@ -89,6 +90,9 @@ impl EditBuffer {
     }
     pub fn file_name(&self) -> &str {
         &self.file_name
+    }
+    pub fn set_file_name(&mut self, file_name: &str) {
+        self.file_name = file_name.to_string();
     }
     /// return cursor x position on the buffer coodinate.
     pub fn cur_x(&self) -> usize {
@@ -415,7 +419,7 @@ mod tests {
         };
         let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        buf.load_file("src/main.rs");
+        buf.load_file("src/main.rs").unwrap();
         assert_eq!(buf.file_name, "src/main.rs");
     }
     #[test]
@@ -426,12 +430,8 @@ mod tests {
         };
         let window = Window::new(1, 1, 80, 24, screen);
         let mut buf = EditBuffer::new(window);
-        let file_name = "tests/not_exist.txt";
-        
-        buf.load_file(file_name);
-
-        assert_eq!(buf.file_name(), file_name);
-
+        let file_name = "tests/not_exist.txt";  
+        assert!(buf.load_file(file_name).is_err());
     }
 
     #[test]
