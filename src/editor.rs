@@ -179,7 +179,10 @@ impl Editor {
                                         match x {
                                             AfterPrompt::SaveFileAs => {
                                                 self.buf.save_file_as(&self.input);
+                                                self.status.set_file_name(self.buf.file_name());
+                                                self.status.redraw(&mut stdout);
                                             }
+
                                         }
                                         self.after_prompt = None;
                                     }

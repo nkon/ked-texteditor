@@ -71,6 +71,7 @@ impl EditBuffer {
             for line in &self.buffer {
                 writeln!(file, "{}", line).unwrap();
             }
+            self.file_name = file_name.to_string();
         } else {
             eprintln!("save_file_as:can not write:{}", file_name);
         }
