@@ -61,6 +61,15 @@ impl Editor {
         self.status.set_file_name(file_name);
         self.run_editor(debug_mode);
     }
+    pub fn focus_edit_window(&mut self, output: &mut termion::raw::RawTerminal<std::io::Stdout>) {
+        write!(
+            output,
+            "{}",
+            cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
+        )
+        .unwrap();
+        output.flush().unwrap();
+    }
     fn run_editor(&mut self, debug_mode: bool) {
         let stdin = stdin();
         // let mut stdout = stdout().into_raw_mode().unwrap();
@@ -86,9 +95,11 @@ impl Editor {
                         Ok(event::Key::Ctrl('c')) => {
                             if self.changed == true {
                                 self.edit_mode = EditMode::OneKeyInput;
-                                self.prompt.set_prompt("File is modified. Exit? [y/n]");
+                                self.prompt.set_prompt("File is modified. Exit? [Y/n]");
                                 self.after_prompt = AfterPrompt::ExitY;
                                 self.prompt.redraw(&mut stdout);
+                            } else {
+                                break;
                             }
                         }
                         Ok(event::Key::Ctrl('s')) => {
@@ -161,13 +172,7 @@ impl Editor {
                         self.buf.disp_params(&mut stdout);
                     }
                     self.status.redraw(&mut stdout);
-                    write!(
-                        stdout,
-                        "{}",
-                        cursor::Goto(self.buf.window().scr_cur_x(), self.buf.window().scr_cur_y())
-                    )
-                    .unwrap();
-                    stdout.flush().unwrap();
+                    self.focus_edit_window(&mut stdout);
                 }
                 EditMode::Prompt => {
                     match c {
@@ -184,16 +189,7 @@ impl Editor {
                                 self.input = String::from(self.prompt.result());
                                 self.prompt.clear(&mut stdout);
                                 self.status.redraw(&mut stdout);
-                                write!(
-                                    stdout,
-                                    "{}",
-                                    cursor::Goto(
-                                        self.buf.window().scr_cur_x(),
-                                        self.buf.window().scr_cur_y()
-                                    )
-                                )
-                                .unwrap();
-                                stdout.flush().unwrap();
+                                self.focus_edit_window(&mut stdout);
                                 match &mut self.after_prompt {
                                     AfterPrompt::SaveFileAs => {
                                         self.buf.save_file_as(&self.input);
@@ -216,17 +212,23 @@ impl Editor {
                 EditMode::OneKeyInput => match c {
                     Ok(event::Key::Ctrl('c')) => {
                         self.edit_mode = EditMode::Editor;
+                        self.prompt.set_prompt("");
+                        self.prompt.clear(&mut stdout);
+                        self.focus_edit_window(&mut stdout);
                     }
-                    Ok(event::Key::Char(c)) => {
-                        match &mut self.after_prompt {
-                            AfterPrompt::ExitY => {
-                                if c == 'y' || c == '\n' {
-                                    break;
-                                }
-                            }  
-                            _ => {}
+                    Ok(event::Key::Char(c)) => match &mut self.after_prompt {
+                        AfterPrompt::ExitY => {
+                            if c == 'y' || c == '\n' {
+                                break;
+                            } else {
+                                self.edit_mode = EditMode::Editor;
+                                self.prompt.set_prompt("");
+                                self.prompt.clear(&mut stdout);
+                                self.focus_edit_window(&mut stdout);
+                            }
                         }
-                    }
+                        _ => {}
+                    },
                     _ => {}
                 },
             }
