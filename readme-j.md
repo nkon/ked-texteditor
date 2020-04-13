@@ -170,7 +170,7 @@ fn main() {
 
 「頻繁な操作は軽く、希な操作は重くても良い」というトレード・オフを具現化したデータ構造。プログラミング初心者のころに雑誌の記事で読んで、感心した記憶がある。
 
-[https://en.wikipedia.org/wiki/Gap_buffer](https://en.wikipedia.org/wiki/Gap_buffer)
+* [https://en.wikipedia.org/wiki/Gap_buffer](https://en.wikipedia.org/wiki/Gap_buffer)
 
 #### Rope / PieceTable
 
@@ -184,18 +184,20 @@ fn main() {
 
 追記型なので、物理メモリではなく仮想メモリに割り当てておけば巨大ファイルも編集可能になるのだろうか。書き込み単位ごとにメモリ小片ができあがるのでUndoとの相性が良さそうだ。小片ごとに属性（構文ハイライトなど）も付けやすいというメリットもあるかもしれない。
 
-[https://en.wikipedia.org/wiki/Piece_table](https://en.wikipedia.org/wiki/Piece_table)
-[https://en.wikipedia.org/wiki/Rope_(data_structure)](https://en.wikipedia.org/wiki/Rope_(data_structure))
+* [https://en.wikipedia.org/wiki/Piece_table](https://en.wikipedia.org/wiki/Piece_table)
+* [https://en.wikipedia.org/wiki/Rope_(data_structure)](https://en.wikipedia.org/wiki/Rope_(data_structure))
 
 ### 日本語の取り扱い（UTF-8）
 
-今の時代、日本語・他言語対応はUTF-8に対応させておけばいいだろう。
+今の時代、日本語・多言語対応はUTF-8に対応させておけばいいだろう。
 
-Rustの場合、文字列を表すString型はUTF-8エンコードされたバイト列なので、Stringをそのまま使える。ただし、UTF-8は位置文字のバイト数が文字によって異なるので扱いが面倒だ。実装をよく理解して、適切なAPIを使いこなさなければならない。`String::chars().count()`は文字数を返すが、`String::len()`はバイト数を返す。こういった使い分けに注意すれば、絵文字などの多バイトUTF-8も、標準ライブラリがうまくハンドリングできる。同様に、`String`は`[]`で添字アクセスできないが`[..]`でスライスアクセスできる。スライスアクセスの時の添字はバイト列に対して働く。表示の文字幅を数えるためにはunicode-width crateが使える。
+Rustの場合、文字列を表すString型はUTF-8エンコードされたバイト列なので、Stringをそのまま使える。
+
+ただし、UTF-8は位置文字のバイト数が文字によって異なるので扱いが面倒だ。実装をよく理解して、適切なAPIを使いこなさなければならない。`String::chars().count()`は文字数を返すが、`String::len()`はバイト数を返す。こういった使い分けに注意すれば、絵文字などの多バイトUTF-8も、標準ライブラリがうまくハンドリングできる。同様に、`String`は`[]`で添字アクセスできないが`[..]`でスライスアクセスできる。スライスアクセスの時の添字はバイト列に対して働く。UTF-8は位置文字のバイト数が可変である。それをスクリーンに表示したときの表示幅も、文字によって、たとえばASCIIと漢字によって異なる。表示の文字幅を数えるためには`unicode-width` というクレートが使える。
 
 一般的に、一行の中にどのような文字（バイト数、表示幅）があるのかはわからない。行を移動したら、行の文字列の先頭からスキャンして、文字ごとのバイト数と表示幅の情報をキャッシュしておく。一行の長さはせいぜい100文字ぐらいなことが多いので現代のマシンではそれほど高コストにはならない。EditBufferのカーソルは文字数カウントで数え、表示用のカーソルは文字幅を考慮してカウントするようにする。
 
-[https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html](https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html)
+* [https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html](https://doc.rust-jp.rs/book/second-edition/ch08-02-strings.html)
 
 ```rust
 fn calc_line(&mut self) {
@@ -213,10 +215,6 @@ fn calc_line(&mut self) {
 ### モーダルインプット
 
 たとえば、新規保存するファイル名など、キー入力による編集操作ではなく、ユーザから文字列の入力が必要な場面がある。このような場合、すでに端末をRAWモードにしているので、COOKEDモードで提供されている文字列編集の機能（バックスペースやエンターで確定など）はすべて自前で実装しなおさなければならない。ミニラインエディタを実装して埋め込む感じだ。
-
-### IME
-
-未実装。これから。
 
 ## 開発の進め方
 
@@ -280,8 +278,7 @@ Rustでは変数やモジュールの可視性、変更可能性がデフォル�
 
 Rustのユニットテストはバイナリークレート（`fn main`を起点に実行される）には適用できない。ライブラリクレート（他の実行主体から呼ばれる）に対して適用される。同一のプロジェクトに対して、`main.rs`は、ほぼ`fn main()`のみを含む。それと並列に`lib.rs`を作り、ライブラリとして個々のモジュールを読み込む。
 
-[https://doc.rust-jp.rs/book/second-edition/ch11-03-test-organization.html#a%E3%83%90%E3%82%A4%E3%83%8A%E3%83%AA%E3%82%AF%E3%83%AC%E3%83%BC%E3%83%88%E7%94%A8%E3%81%AE%E7%B5%90%E5%90%88%E3%83%86%E3%82%B9%E3%83%88]
-(https://doc.rust-jp.rs/book/second-edition/ch11-03-test-organization.html#a%E3%83%90%E3%82%A4%E3%83%8A%E3%83%AA%E3%82%AF%E3%83%AC%E3%83%BC%E3%83%88%E7%94%A8%E3%81%AE%E7%B5%90%E5%90%88%E3%83%86%E3%82%B9%E3%83%88)
+* [https://doc.rust-jp.rs/book/second-edition/ch11-03-test-organization.html](https://doc.rust-jp.rs/book/second-edition/ch11-03-test-organization.html)
 
 ```
 ked/
@@ -391,17 +388,13 @@ diff $DIR/output.txt $DIR/output_ok.txt
 if [ "$?" -eq 0 ]
 then
     echo "OK"
+    rm $DIR/output.txt
     exit 0
 else
     echo "******************** TEST FAIL *************************"
     exit 1
 fi
 ```
-
-
-
-
-
 
 ### アサーション
 
