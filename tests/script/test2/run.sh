@@ -6,10 +6,10 @@ diff $DIR/output.txt $DIR/output_ok.txt
 if [ "$?" -eq 0 ]
 then
     echo "OK"
+    rm $DIR/output.txt
     exit 0
 else
     echo "******************** TEST FAIL *************************"
     exit 1
 fi
-
 

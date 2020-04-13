@@ -251,6 +251,10 @@ impl Editor {
                     self.buf.new_buffer();
                     self.status.set_file_name("[NEW FILE]");
                 }
+                "set_file_name" => {
+                    self.buf.set_file_name(&cmd.argstr);
+                    self.status.set_file_name(&cmd.argstr);
+                }
                 "open_file" => {
                     self.buf.load_file(&cmd.argstr).unwrap();
                     self.status.set_file_name(&cmd.argstr);
